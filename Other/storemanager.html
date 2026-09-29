@@ -1,0 +1,2796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Store Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --bg:#0a0a0c; --bg2:#111115; --bg3:#16161b; --bg4:#1e1e24; --border:#2a2a32;
+  --fg:#e8e6e1; --fg2:#9a9890; --fg3:#5a594f;
+  --accent:#e8a83e; --accentD:rgba(232,168,62,.14); --accentG:rgba(232,168,62,.38);
+  --ok:#3dd68c; --okD:rgba(61,214,140,.12);
+  --err:#f05e5e; --errD:rgba(240,94,94,.12);
+  --blue:#3da3e8; --purple:#a78bfa;
+}
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; }
+body { background:var(--bg); color:var(--fg); font-family:'Space Grotesk', -apple-system, sans-serif; overflow:hidden; }
+button { font-family:inherit; cursor:pointer; }
+input, textarea, select { font-family:inherit; }
+
+.app { display:flex; flex-direction:column; height:100dvh; max-width:640px; margin:0 auto; position:relative; }
+
+/* Header */
+.header { padding:14px 16px 10px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); flex-shrink:0; }
+.header h1 { font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.header h1 i { color:var(--accent); font-size:15px; }
+.dirty-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); display:none; }
+.dirty-dot.show { display:block; }
+.header-actions { display:flex; gap:8px; }
+.icon-btn { width:36px; height:36px; border-radius:10px; border:1px solid var(--border); background:var(--bg3); color:var(--fg2); font-size:14px; display:flex; align-items:center; justify-content:center; }
+.icon-btn:active { transform:scale(.92); }
+
+/* Main scroll area */
+.main { flex:1; overflow-y:auto; overscroll-behavior:contain; padding:16px 16px 90px; -webkit-overflow-scrolling:touch; }
+.view { display:none; animation:fadeIn .18s ease; }
+.view.active { display:block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+/* Sections & cards */
+.sec-title { font-size:12px; font-weight:700; color:var(--fg2); text-transform:uppercase; letter-spacing:.08em; margin:22px 0 10px; display:flex; align-items:center; justify-content:space-between; }
+.sec-title:first-child { margin-top:0; }
+.card { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:10px; }
+.stats-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:6px; }
+.stat { background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:12px 6px; text-align:center; }
+.stat-num { font-size:20px; font-weight:700; color:var(--accent); }
+.stat-label { font-size:10px; color:var(--fg2); margin-top:2px; }
+
+/* Buttons */
+.btn { display:flex; align-items:center; justify-content:center; gap:8px; padding:13px 16px; border:none; border-radius:13px; font-size:14px; font-weight:600; width:100%; transition:transform .1s; }
+.btn:active { transform:scale(.98); }
+.btn-p { background:var(--accent); color:#141412; }
+.btn-s { background:var(--bg4); color:var(--fg); border:1px solid var(--border); }
+.btn-d { background:var(--errD); color:var(--err); border:1px solid rgba(240,94,94,.3); }
+.btn-sm { padding:9px 12px; font-size:12px; border-radius:10px; width:auto; }
+
+/* App rows */
+.app-row { display:flex; align-items:center; gap:10px; background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:10px 12px; margin-bottom:8px; }
+.app-row:active { background:var(--bg4); }
+.app-ico { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:21px; flex-shrink:0; overflow:hidden; color:#fff; }
+.app-row-info { flex:1; min-width:0; }
+.app-row-name { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.app-row-sub { font-size:11px; color:var(--fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+.badges { display:flex; gap:4px; margin-top:4px; flex-wrap:wrap; }
+.badge { font-size:9px; font-weight:700; padding:2px 7px; border-radius:6px; letter-spacing:.03em; }
+.badge.f { background:var(--accentD); color:var(--accent); }
+.badge.n { background:rgba(61,214,140,.12); color:var(--ok); }
+.badge.p { background:rgba(168,110,255,.14); color:var(--purple); }
+.badge.c { background:rgba(61,163,232,.12); color:var(--blue); }
+.badge.a { background:rgba(232,168,62,.1); color:var(--accent); border:1px solid rgba(232,168,62,.25); }
+.badge.h { background:var(--errD); color:var(--err); }
+.badge.warn { background:var(--errD); color:var(--err); }
+.quick-btns { display:flex; gap:5px; flex-shrink:0; }
+.qbtn { width:32px; height:32px; border-radius:9px; border:1px solid var(--border); background:var(--bg4); color:var(--fg3); font-size:12px; display:flex; align-items:center; justify-content:center; }
+.qbtn.on-f { background:var(--accentD); border-color:var(--accent); color:var(--accent); }
+.qbtn.on-n { background:rgba(61,214,140,.12); border-color:var(--ok); color:var(--ok); }
+.qbtn.on-p { background:rgba(168,110,255,.14); border-color:var(--purple); color:var(--purple); }
+.qbtn.on-h { background:var(--errD); border-color:var(--err); color:var(--err); }
+.qbtn:active { transform:scale(.88); }
+
+/* Ordered list controls */
+.order-row { display:flex; align-items:center; gap:8px; background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:8px 10px; margin-bottom:8px; }
+.order-ico { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; color:#fff; }
+.order-info { flex:1; min-width:0; }
+.order-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.order-sub { font-size:10px; color:var(--fg2); margin-top:1px; }
+.order-btns { display:flex; gap:5px; }
+.obtn { width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--bg4); color:var(--fg2); font-size:11px; display:flex; align-items:center; justify-content:center; }
+.obtn:active { transform:scale(.9); }
+.obtn.off { color:var(--fg3); }
+.obtn.del { color:var(--err); }
+
+/* Category rows */
+.cat-row { display:flex; align-items:center; gap:10px; background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:10px 12px; margin-bottom:8px; }
+.cat-emoji { width:40px; height:40px; border-radius:10px; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+.cat-info { flex:1; min-width:0; }
+.cat-name { font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; }
+.cat-sub { font-size:11px; color:var(--fg2); margin-top:1px; }
+.repo-badge { font-size:8.5px; font-weight:700; padding:2px 6px; border-radius:5px; background:rgba(61,163,232,.12); color:var(--blue); letter-spacing:.05em; }
+
+/* Inputs */
+.field { margin-bottom:12px; }
+.field label { display:block; font-size:11px; font-weight:600; color:var(--fg2); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+.field input[type=text], .field input[type=url], .field input[type=number], .field textarea, .field select {
+  width:100%; background:var(--bg2); border:1.5px solid var(--border); border-radius:11px; color:var(--fg);
+  padding:12px 13px; font-size:14px; outline:none; transition:border-color .15s;
+}
+.field input:focus, .field textarea:focus { border-color:var(--accent); }
+.field textarea { resize:vertical; min-height:70px; }
+.field .hint { font-size:10.5px; color:var(--fg3); margin-top:5px; line-height:1.4; }
+.field input[readonly] { opacity:.6; }
+.seg { display:flex; background:var(--bg2); border:1.5px solid var(--border); border-radius:11px; overflow:hidden; }
+.seg button { flex:1; padding:11px 8px; border:none; background:transparent; color:var(--fg2); font-size:12.5px; font-weight:600; }
+.seg button.on { background:var(--accent); color:#141412; }
+
+/* Toggles */
+.toggle-row { display:flex; align-items:center; gap:10px; background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; }
+.toggle-row i.lead { width:20px; text-align:center; color:var(--fg2); font-size:14px; }
+.toggle-row .t-info { flex:1; }
+.toggle-row .t-name { font-size:13px; font-weight:600; }
+.toggle-row .t-sub { font-size:10.5px; color:var(--fg2); margin-top:1px; }
+.switch { width:44px; height:26px; border-radius:13px; background:var(--border); border:none; position:relative; flex-shrink:0; transition:background .2s; }
+.switch::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:transform .2s; }
+.switch.on { background:var(--accent); }
+.switch.on::after { transform:translateX(18px); }
+
+/* Tag chips */
+.tag-chips { display:flex; flex-wrap:wrap; gap:7px; max-height:220px; overflow-y:auto; padding:2px; }
+.tag-chip { padding:8px 13px; border-radius:20px; border:1.5px solid var(--border); background:var(--bg2); color:var(--fg2); font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; }
+.tag-chip.on { border-color:var(--accent); background:var(--accentD); color:var(--accent); }
+.tag-chip:active { transform:scale(.95); }
+.tag-chip.locked { opacity:.55; border-style:dashed; }
+.folder-note { font-size:10.5px; color:var(--fg3); margin:8px 0 6px; line-height:1.5; }
+
+/* Icon / color pickers */
+.picker-grid { display:grid; grid-template-columns:repeat(7, 1fr); gap:7px; max-height:200px; overflow-y:auto; padding:2px; }
+.pick-cell { aspect-ratio:1; border-radius:10px; border:1.5px solid var(--border); background:var(--bg2); display:flex; align-items:center; justify-content:center; font-size:19px; color:var(--fg); }
+.pick-cell.sel { border-color:var(--accent); background:var(--accentD); }
+.pick-cell:active { transform:scale(.9); }
+.swatch-grid { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; }
+.swatch { aspect-ratio:1; border-radius:11px; border:2px solid var(--border); }
+.swatch.sel { border-color:#fff; box-shadow:0 0 0 2px var(--accent); }
+.swatch:active { transform:scale(.92); }
+
+/* ===== WebOS-matching icon & color picker styles ===== */
+.icon-preview-bar { position:sticky; top:-16px; z-index:10; margin:-16px -18px 14px; padding:14px 18px; background:var(--bg2); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+.icon-preview-bar .ip-icon { width:56px; height:56px; border-radius:16px; border:1px solid var(--border); background:var(--bg3); box-shadow:0 4px 10px rgba(0,0,0,.25); display:flex; align-items:center; justify-content:center; font-size:26px; overflow:hidden; flex-shrink:0; }
+.icon-preview-bar .ip-mid { flex:1; min-width:0; }
+.icon-preview-bar .ip-name { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.icon-preview-bar .ip-sub { font-size:11px; color:var(--fg2); margin-top:2px; }
+.icon-preview-bar .btn { flex:0 0 96px; }
+.icon-grid-section-title { font-size:12px; color:var(--fg2); margin:0 0 10px; }
+
+/* Mass edit field rows — checkbox + control, only checked fields get applied */
+.me-row { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
+.me-head { display:flex; align-items:center; gap:9px; }
+.me-check { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; cursor:pointer; user-select:none; flex:1; }
+.me-check input[type=checkbox] { width:18px; height:18px; accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
+.me-body { display:none; margin-top:10px; }
+.me-row.enabled .me-body { display:block; }
+.me-row.enabled { border-color:var(--accentG); }
+.me-swatch-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:8px; }
+.me-swatch { height:38px; border-radius:10px; cursor:pointer; border:1px solid var(--border); transition:transform .15s; }
+.me-swatch.selected { outline:2px solid var(--accent); outline-offset:2px; }
+.me-input { width:100%; background:var(--bg2); border:1.5px solid var(--border); border-radius:10px; color:var(--fg); padding:10px 12px; font-size:13px; outline:none; }
+.me-seg { display:flex; gap:6px; margin-bottom:8px; }
+.me-seg button { flex:1; background:var(--bg2); border:1.5px solid var(--border); border-radius:10px; color:var(--fg2); font-size:12px; font-weight:700; padding:8px 6px; }
+.me-seg button.on { border-color:var(--accent); color:var(--accent); }
+.icon-custom-row { display:flex; gap:10px; margin-bottom:20px; }
+.icon-custom-row input { flex:1; font-size:20px; text-align:center; padding:12px 10px; background:var(--bg2); border:1.5px solid var(--border); border-radius:11px; color:var(--fg); outline:none; }
+.icon-custom-row .btn { flex:0 0 90px; }
+.icon-grid { display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; margin-bottom:20px; }
+.icon-opt { height:48px; border-radius:12px; background:var(--bg3); border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; color:var(--accent); transition:all .15s; }
+.icon-opt.selected { border-color:var(--accent); background:var(--accentD); }
+.icon-opt:active { transform:scale(.92); }
+.color-swatch-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:16px; }
+.color-swatch { height:60px; border-radius:16px; cursor:pointer; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,.25); transition:transform .15s; position:relative; overflow:hidden; }
+.color-swatch:active { transform:scale(.95); }
+.color-swatch.selected { outline:2px solid var(--accent); outline-offset:2px; }
+.color-swatch .swatch-tag { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.65); color:#fff; font-size:8px; text-align:center; padding:2px 0; font-weight:600; }
+.color-preview-container { display:flex; justify-content:center; align-items:center; flex-direction:column; gap:8px; margin-bottom:20px; padding:20px; background:var(--bg3); border-radius:14px; }
+.color-preview-icon { width:60px; height:60px; border-radius:16px; border:1px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,.25); display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; overflow:hidden; }
+.color-preview-label { font-size:12px; color:var(--fg2); }
+.preview-box { display:flex; align-items:center; gap:12px; background:var(--bg2); border:1px solid var(--border); border-radius:13px; padding:12px; margin-bottom:14px; }
+.preview-ico { width:56px; height:56px; border-radius:15px; display:flex; align-items:center; justify-content:center; font-size:26px; color:#fff; flex-shrink:0; }
+.preview-meta { flex:1; min-width:0; }
+.preview-name { font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.preview-sub { font-size:11px; color:var(--fg2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.repo-banner { display:flex; align-items:center; gap:9px; background:rgba(61,163,232,.08); border:1px solid rgba(61,163,232,.25); border-radius:11px; padding:10px 12px; margin-bottom:14px; font-size:11.5px; color:var(--fg2); line-height:1.5; }
+.repo-banner i { color:var(--blue); font-size:14px; flex-shrink:0; }
+.repo-banner b { color:var(--fg); }
+
+/* Sheet overlays */
+.sheet-ov { position:absolute; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(3px); z-index:50; display:none; align-items:flex-end; }
+/* Pickers stack ABOVE editor sheets so they never open behind them */
+#iconOv, #colorOv, #catEmojiOv { z-index:60; }
+#iconColorOv { z-index:70; }
+.sheet-ov.active { display:flex; }
+.sheet { width:100%; max-height:92dvh; background:var(--bg2); border-radius:22px 22px 0 0; display:flex; flex-direction:column; animation:slideUp2 .25s cubic-bezier(.16,1,.3,1); }
+@keyframes slideUp2 { from { transform:translateY(40px); opacity:.5; } to { transform:none; opacity:1; } }
+.sheet-bar { width:38px; height:4px; border-radius:2px; background:var(--border); margin:10px auto 4px; flex-shrink:0; }
+.sheet-head { display:flex; align-items:center; justify-content:space-between; padding:8px 18px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.sheet-head h3 { font-size:16px; font-weight:700; }
+.sheet-body { flex:1; overflow-y:auto; padding:16px 18px 30px; -webkit-overflow-scrolling:touch; }
+.sheet-foot { display:flex; gap:8px; padding:12px 18px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); flex-shrink:0; }
+
+/* Bottom nav */
+.nav { position:absolute; bottom:0; left:0; right:0; display:flex; background:color-mix(in srgb, var(--bg2) 92%, transparent); backdrop-filter:blur(14px); border-top:1px solid var(--border); z-index:20; padding-bottom:env(safe-area-inset-bottom); }
+.nav button { flex:1; padding:9px 4px 10px; border:none; background:none; color:var(--fg3); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; font-weight:600; }
+.nav button i { font-size:17px; }
+.nav button.active { color:var(--accent); }
+
+/* Toast */
+.toast-box { position:absolute; top:14px; left:14px; right:14px; z-index:200; display:flex; flex-direction:column; gap:6px; pointer-events:none; }
+.toast { padding:11px 14px; border-radius:12px; font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:8px; background:var(--bg4); border:1px solid var(--border); box-shadow:0 6px 18px rgba(0,0,0,.4); animation:fadeIn .2s ease; }
+.toast.ok { border-color:rgba(61,214,140,.4); color:var(--ok); }
+.toast.err { border-color:rgba(240,94,94,.4); color:var(--err); }
+.toast.info { color:var(--fg2); }
+
+/* Search */
+.search-wrap { position:relative; margin-bottom:12px; }
+.search-wrap i { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--fg3); font-size:13px; }
+.search-wrap input { width:100%; background:var(--bg2); border:1.5px solid var(--border); border-radius:12px; color:var(--fg); padding:12px 12px 12px 36px; font-size:14px; outline:none; }
+.search-wrap input:focus { border-color:var(--accent); }
+
+/* FAB removed — apps are added via repo scan or "Add Apps from Another Repo" in Export */
+
+/* Folder browsing breadcrumbs */
+.crumb-bar { display:flex; align-items:center; flex-wrap:wrap; gap:6px 4px; margin-bottom:12px; row-gap:8px; }
+.crumb-btn { border:none; background:var(--bg3); color:var(--fg2); font-family:inherit; font-size:12px; font-weight:600; padding:7px 12px; border-radius:9px; cursor:pointer; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.crumb-btn.cur { background:var(--accentD); color:var(--accent); }
+.crumb-btn:active { transform:scale(.95); }
+.crumb-sep { color:var(--fg3); font-size:11px; }
+.crumb-bar .qbtn { margin-left:2px; }
+.crumb-bar > span[style*="flex:1"] { min-width:8px; }
+
+/* Export view */
+.export-stats { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+.export-stat { display:flex; justify-content:space-between; font-size:13px; color:var(--fg2); }
+.export-stat b { color:var(--fg); }
+.steps { counter-reset:step; }
+.step { display:flex; gap:12px; margin-bottom:14px; }
+.step-num { width:24px; height:24px; border-radius:50%; background:var(--accentD); color:var(--accent); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.step p { font-size:12.5px; color:var(--fg2); line-height:1.55; }
+.step p b { color:var(--fg); }
+
+.empty { text-align:center; padding:34px 20px; color:var(--fg3); }
+.empty .e-ico { font-size:38px; margin-bottom:10px; }
+.empty .e-title { font-size:15px; font-weight:700; color:var(--fg2); }
+.empty .e-sub { font-size:12px; margin-top:6px; line-height:1.6; }
+
+.load-bar { height:4px; background:var(--bg4); border-radius:2px; overflow:hidden; margin-top:12px; display:none; }
+.load-bar.active { display:block; }
+.load-bar::after { content:''; display:block; height:100%; width:40%; background:var(--accent); border-radius:2px; animation:slide 1s ease-in-out infinite; }
+@keyframes slide { from { transform:translateX(-100%); } to { transform:translateX(350%); } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="header">
+    <h1><i class="fa-solid fa-store"></i> Store Manager <span class="dirty-dot" id="dirtyDot"></span></h1>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="SM.scanRepo()" title="Reload repo catalog"><i class="fa-solid fa-cloud-arrow-down"></i></button>
+      <button class="icon-btn" onclick="SM.undoAll()" title="Discard changes, restore last saved"><i class="fa-solid fa-clock-rotate-left"></i></button>
+    </div>
+  </header>
+
+  <main class="main" id="mainScroll">
+
+    <!-- ============ DASHBOARD ============ -->
+    <div class="view active" id="view-dash">
+      <div class="card" id="scanCard">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <i class="fa-brands fa-github" style="font-size:20px; color:var(--fg2);"></i>
+          <div style="flex:1;">
+            <div style="font-size:13px; font-weight:700;" id="scanStatus">Repo catalog not loaded</div>
+            <div style="font-size:10.5px; color:var(--fg2); margin-top:1px;" id="scanSub">Loads every app from your repo</div>
+          </div>
+        </div>
+        <button class="btn btn-p" onclick="SM.scanRepo()"><i class="fa-solid fa-cloud-arrow-down"></i> Scan Repo Catalog</button>
+        <div class="load-bar" id="scanBar"></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-num" id="stCatalog">0</div><div class="stat-label">Repo Apps</div></div>
+        <div class="stat"><div class="stat-num" id="stFeat">0</div><div class="stat-label">Featured</div></div>
+        <div class="stat"><div class="stat-num" id="stNew">0</div><div class="stat-label">New</div></div>
+        <div class="stat"><div class="stat-num" id="stCustom">0</div><div class="stat-label">Customized</div></div>
+      </div>
+
+      <div class="sec-title">⭐ Featured Apps</div>
+      <div id="dashFeatured"></div>
+
+      <div class="sec-title">🆕 New Apps</div>
+      <div id="dashNew"></div>
+    </div>
+
+    <!-- ============ APPS ============ -->
+    <div class="view" id="view-apps">
+      <div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="appSearch" placeholder="Search apps, folders, authors…" oninput="SM.renderAppList()"></div>
+      <button class="btn btn-s btn-sm" style="width:100%; margin-bottom:10px;" onclick="SM.openMassEdit()"><i class="fa-solid fa-list-check"></i> Mass Edit Apps</button>
+      <div class="folder-note" id="appsHint">Tap a row to edit. ⭐ ✨ 📌 = Featured / New / Pinned.</div>
+      <div id="appsList"></div>
+    </div>
+
+    <!-- ============ CATEGORIES ============ -->
+    <div class="view" id="view-cats">
+      <div class="card" id="catNewCard" style="display:flex; gap:8px; align-items:center;">
+        <div class="cat-emoji" id="newCatEmoji" onclick="SM.openCatEmojiPicker('new')">📁</div>
+        <input type="text" id="newCatName" placeholder="New custom category…" style="flex:1; background:var(--bg2); border:1.5px solid var(--border); border-radius:11px; color:var(--fg); padding:11px 13px; font-size:14px; outline:none;">
+        <button class="btn btn-p btn-sm" style="height:44px;" onclick="SM.addCategory()"><i class="fa-solid fa-plus"></i></button>
+      </div>
+      <div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="catSearch" placeholder="Search folders, categories, apps…" oninput="SM.renderCats()"></div>
+      <div class="folder-note" id="catsHint">Click any folder/category to browse inside. ✏ edits name/icon/download, 👁 hides from store. Subfolders work the same way as top-level folders.</div>
+      <div id="catsList"></div>
+    </div>
+
+    <!-- ============ EXPORT ============ -->
+    <div class="view" id="view-export">
+      <div class="sec-title">Store Repo (the base)</div>
+      <div class="card">
+        <div class="field" style="margin-bottom:8px;">
+          <label>owner/repo</label>
+          <input type="text" id="repoField" placeholder="Kadharriminecraft/official-list">
+          <div class="hint">The store reads this repo live.</div>
+        </div>
+        <button class="btn btn-s" onclick="SM.applyRepoField()"><i class="fa-solid fa-check"></i> Save Repo &amp; Rescan</button>
+        <div class="load-bar" id="scanBar2"></div>
+      </div>
+
+      <div class="sec-title">Your Store JSON Link</div>
+      <div class="card">
+        <div class="field" style="margin-bottom:8px;">
+          <label>GitHub raw JSON link (optional here)</label>
+          <input type="url" id="storeUrlField" placeholder="https://raw.githubusercontent.com/you/repo/main/store.json">
+          <div class="hint">For one-tap reload in this manager.</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-p" style="flex:1;" onclick="SM.reloadFromGitHub()"><i class="fa-solid fa-cloud-arrow-down"></i> Load</button>
+          <button class="btn btn-s" style="flex:1;" onclick="SM.saveStoreUrl()"><i class="fa-solid fa-floppy-disk"></i> Save Link</button>
+        </div>
+        <div class="load-bar" id="loadBar"></div>
+      </div>
+
+      <div class="sec-title">Export Store JSON</div>
+      <div class="card">
+        <div class="export-stats">
+          <div class="export-stat"><span>Repo catalog</span><b id="exCatalog">not scanned</b></div>
+          <div class="export-stat"><span>Customized entries / Featured / New / Pinned</span><b id="exFlags">0 / 0 / 0 / 0</b></div>
+          <div class="export-stat"><span>Custom categories</span><b id="exCats">0</b></div>
+          <div class="export-stat"><span>File size</span><b id="exSize">0 KB</b></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:9px; margin-top:14px;">
+          <button class="btn btn-p" onclick="SM.exportDownload()"><i class="fa-solid fa-file-arrow-down"></i> Download store.json</button>
+          <button class="btn btn-s" onclick="SM.exportCopy()"><i class="fa-solid fa-copy"></i> Copy JSON to Clipboard</button>
+        </div>
+        <div class="hint" style="margin-top:10px;">Only your customizations are in the file — untouched repo apps aren't mentioned at all.</div>
+      </div>
+
+      <div class="sec-title">Import</div>
+      <div class="card">
+        <button class="btn btn-s" onclick="SM.importFromFile()"><i class="fa-solid fa-file-import"></i> Import store.json File</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="SM.importFilePicked(event)">
+        <div class="field" style="margin-top:10px; margin-bottom:0;">
+          <textarea id="importText" placeholder="…or paste store JSON here" style="min-height:80px; font-family:monospace; font-size:11px;"></textarea>
+          <button class="btn btn-s" style="margin-top:8px;" onclick="SM.importFromText()"><i class="fa-solid fa-check"></i> Import Pasted JSON</button>
+        </div>
+      </div>
+
+      <div class="sec-title">Add Apps from Another Repo</div>
+      <div class="card">
+        <div class="field" style="margin-bottom:8px;">
+          <label>owner/repo</label>
+          <input type="text" id="otherRepoField" placeholder="someone/their-apps">
+          <div class="hint">Adds its app files as store entries.</div>
+        </div>
+        <button class="btn btn-s" onclick="SM.bulkImportRepo()"><i class="fa-brands fa-github"></i> Scan &amp; Add</button>
+        <div class="load-bar" id="repoBar"></div>
+      </div>
+
+      <div class="sec-title">Push Directly to GitHub</div>
+      <div class="card">
+        <div class="field" style="margin-bottom:8px;">
+          <label>GitHub token</label>
+          <input type="password" id="ghTokenField" placeholder="ghp_… or github_pat_…" autocomplete="off" spellcheck="false">
+          <div class="hint">Needs write access to <b id="ghTokenRepoHint">this repo</b> — classic token: <b>repo</b> scope · fine-grained: <b>Contents: Read and write</b>. Saved on this device only. Create one at github.com/settings/tokens.</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <div class="field" style="flex:1; margin-bottom:0;">
+            <label>Branch</label>
+            <input type="text" id="ghBranchField" placeholder="main">
+          </div>
+          <div class="field" style="flex:1; margin-bottom:0;">
+            <label>File path</label>
+            <input type="text" id="ghPathField" placeholder="store.json">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn btn-s" style="flex:1;" onclick="SM.saveGhToken()"><i class="fa-solid fa-floppy-disk"></i> Save Token</button>
+          <button class="btn btn-p" style="flex:1;" onclick="SM.pushStoreToGitHub()"><i class="fa-brands fa-github"></i> Push store.json</button>
+        </div>
+        <div class="load-bar" id="pushBar"></div>
+        <div class="hint" style="margin-top:10px; color:var(--err);"><i class="fa-solid fa-triangle-exclamation"></i> Pushing <b>entirely replaces</b> the store.json in the repo — you'll get a confirmation prompt before it goes through.</div>
+      </div>
+
+      <div class="sec-title">Publish Manually (no token)</div>
+      <div class="card steps">
+        <div class="step"><div class="step-num">1</div><p>Tap <b>Download store.json</b>.</p></div>
+        <div class="step"><div class="step-num">2</div><p>On github.com: <b>Add file → Upload files</b> → drop store.json → Commit.</p></div>
+        <div class="step"><div class="step-num">3</div><p>Done — every device picks it up automatically (store.json in the repo root is auto-detected).</p></div>
+      </div>
+
+      <div class="sec-title">Danger Zone</div>
+      <button class="btn btn-d" onclick="SM.resetAll()"><i class="fa-solid fa-trash-can"></i> Reset All Customizations</button>
+    </div>
+  </main>
+
+  <nav class="nav">
+    <button class="active" data-v="dash" onclick="SM.switchView('dash')"><i class="fa-solid fa-gauge-high"></i>Home</button>
+    <button data-v="apps" onclick="SM.switchView('apps')"><i class="fa-solid fa-table-cells-large"></i>Apps</button>
+    <button data-v="cats" onclick="SM.switchView('cats')"><i class="fa-solid fa-folder-tree"></i>Categories</button>
+    <button data-v="export" onclick="SM.switchView('export')"><i class="fa-solid fa-file-export"></i>Export</button>
+  </nav>
+
+  <!-- ============ APP EDITOR SHEET ============ -->
+  <div class="sheet-ov" id="editorOv" onclick="if(event.target===this)SM.closeEditor()">
+    <div class="sheet">
+      <div class="sheet-bar"></div>
+      <div class="sheet-head">
+        <h3 id="editorTitle">Edit App</h3>
+        <button class="icon-btn" onclick="SM.closeEditor()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="sheet-body">
+        <div class="repo-banner" id="edRepoBanner" style="display:none;">
+          <i class="fa-brands fa-github"></i>
+          <div>Repo app — the file stays in your repo. This JSON only customizes how it appears. <b>Reset to Default</b> removes the customization.</div>
+        </div>
+
+        <div class="preview-box">
+          <div class="preview-ico" id="edPreviewIco">A</div>
+          <div class="preview-meta">
+            <div class="preview-name" id="edPreviewName">App Name</div>
+            <div class="preview-sub" id="edPreviewSub">by Author · tags</div>
+          </div>
+        </div>
+
+        <div class="field"><label>App Name *</label><input type="text" id="edName" placeholder="My Cool App" oninput="SM.updateEditorPreview()"></div>
+        <div class="field"><label>Author</label><input type="text" id="edAuthor" placeholder="Who made it" oninput="SM.updateEditorPreview()"></div>
+        <div class="field"><label>Description</label><textarea id="edDesc" placeholder="What does this app do?" oninput="SM.updateEditorPreview()"></textarea></div>
+
+        <div class="field"><label>Icon</label>
+          <button class="btn btn-s" onclick="SM.openIconPicker()"><i class="fa-solid fa-icons"></i> Pick Icon</button>
+        </div>
+
+        <div class="field"><label>Background</label>
+          <button class="btn btn-s" onclick="SM.openColorPicker()"><i class="fa-solid fa-palette"></i> Pick Background</button>
+          <div class="hint">Current: <span id="edColorHint" style="color:var(--fg);">default</span></div>
+        </div>
+
+        <div class="field"><label>Categories</label>
+          <div class="folder-note" id="edFolderTags" style="display:none;"></div>
+          <div class="tag-chips" id="edTags"></div>
+          <div class="hint">Repo folder tags apply automatically (shown above when present). Toggle custom categories here — apps with no tags still appear in All.</div>
+        </div>
+
+        <div class="field"><label>Store Placement</label>
+          <div class="toggle-row"><i class="lead fa-solid fa-star"></i><div class="t-info"><div class="t-name">Featured</div><div class="t-sub">Big card at the top of the store</div></div><button class="switch" id="edFeatured" onclick="SM.toggleSwitch(this)"></button></div>
+          <div class="toggle-row"><i class="lead fa-solid fa-wand-magic-sparkles"></i><div class="t-info"><div class="t-name">New</div><div class="t-sub">Shown in the New Apps list</div></div><button class="switch" id="edIsNew" onclick="SM.toggleSwitch(this)"></button></div>
+          <div class="toggle-row"><i class="lead fa-solid fa-thumbtack"></i><div class="t-info"><div class="t-name">Pinned (Top Pick)</div><div class="t-sub">Floats to the top inside its categories</div></div><button class="switch" id="edPinned" onclick="SM.toggleSwitch(this)"></button></div>
+          <div class="toggle-row"><i class="lead fa-solid fa-eye-slash"></i><div class="t-info"><div class="t-name">Hidden</div><div class="t-sub">Removed from the store (repo file stays)</div></div><button class="switch" id="edHidden" onclick="SM.toggleSwitch(this)"></button></div>
+        </div>
+
+        <div class="field" id="edSourceField"><label>Download Source (added app)</label>
+          <div class="seg" id="edSourceSeg">
+            <button class="on" onclick="SM.setSourceMode('github', this)"><i class="fa-brands fa-github"></i> GitHub file</button>
+            <button onclick="SM.setSourceMode('url', this)"><i class="fa-solid fa-link"></i> Direct link</button>
+          </div>
+        </div>
+
+        <div id="edGithubFields">
+          <div class="field"><label>Repo (owner/name)</label><input type="text" id="edRepo" placeholder="someone/their-apps"></div>
+          <div class="field"><label>Branch</label><input type="text" id="edBranch" placeholder="main"></div>
+          <div class="field"><label>File path in repo</label><input type="text" id="edPath" placeholder="games/rocket.html"></div>
+        </div>
+        <div id="edUrlFields" style="display:none;">
+          <div class="field"><label>Direct app URL</label><input type="url" id="edUrl" placeholder="https://example.com/app.html"><div class="hint">Any CORS-friendly https link that returns the app's HTML.</div></div>
+        </div>
+
+      </div>
+      <div class="sheet-foot">
+        <button class="btn btn-p" style="flex:2;" onclick="SM.saveApp()"><i class="fa-solid fa-check"></i> Save</button>
+        <button class="btn btn-s" style="flex:1;" onclick="SM.duplicateApp()"><i class="fa-solid fa-copy"></i></button>
+        <button class="btn btn-s" style="flex:1;" id="edResetBtn" onclick="SM.resetEntry()" title="Reset to repo default"><i class="fa-solid fa-rotate-left"></i></button>
+        <button class="btn btn-d" style="flex:1;" id="edDeleteBtn" onclick="SM.deleteApp()"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ICON PICKER SHEET (matches WebOS) ============ -->
+  <div class="sheet-ov" id="iconOv" onclick="if(event.target===this)SM.closeIconPicker()">
+    <div class="sheet">
+      <div class="sheet-bar"></div>
+      <div class="sheet-head"><h3>Pick Icon</h3><button class="icon-btn" onclick="SM.closeIconPicker()"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="sheet-body">
+        <div class="icon-preview-bar">
+          <div class="ip-icon" id="ipPreviewIcon"></div>
+          <div class="ip-mid">
+            <div class="ip-name" id="ipName">App</div>
+            <div class="ip-sub" id="ipSub">Default — auto icon</div>
+          </div>
+          <button class="btn btn-s" id="edSymbolColorBtn" style="display:none;" onclick="SM.openIconColorPicker()" title="Symbol color"><i class="fa-solid fa-palette"></i></button>
+          <button class="btn btn-p" onclick="SM.saveIconPicker()"><i class="fa-solid fa-check"></i> Save</button>
+        </div>
+
+        <div class="icon-grid-section-title">TYPE AN EMOJI</div>
+        <div class="icon-custom-row">
+          <input type="text" id="iconCustomText" placeholder="Type emoji" oninput="SM.onIconCustomInput()">
+          <button class="btn btn-s" onclick="SM.clearIconCustom()">Clear</button>
+        </div>
+
+        <div class="icon-grid-section-title">SYMBOLS</div>
+        <input type="text" id="iconSearch" placeholder="Search symbols… (star, rocket, dragon)" oninput="SM.renderIconGrids(this.value)" style="margin-bottom:12px; width:100%; background:var(--bg2); border:1.5px solid var(--border); border-radius:11px; color:var(--fg); padding:12px 13px; font-size:14px; outline:none;">
+        <div class="icon-grid" id="iconGridSymbols"></div>
+
+        <div class="hint" style="margin-top:14px; padding:10px 12px; background:var(--bg2); border-radius:10px; border:1px solid var(--border); font-size:12px;">
+          <i class="fa-solid fa-circle-info" style="color:var(--accent); margin-right:6px;"></i>
+          Pick a symbol, then tap the <b>palette button</b> next to Save above to choose its color.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SYMBOL COLOR SHEET (opens from the editor foot) ============ -->
+  <div class="sheet-ov" id="iconColorOv" onclick="if(event.target===this)SM.closeIconColorPicker()">
+    <div class="sheet" style="max-width:420px;">
+      <div class="sheet-bar"></div>
+      <div class="sheet-head"><h3>Symbol Color</h3><button class="icon-btn" onclick="SM.closeIconColorPicker()"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="sheet-body">
+        <div class="icon-preview-bar">
+          <div class="ip-icon" id="icPreviewIcon"></div>
+          <div class="ip-mid">
+            <div class="ip-name" id="icName">App</div>
+            <div class="ip-sub" id="icSub">System color</div>
+          </div>
+          <button class="btn btn-p" onclick="SM.closeIconColorPicker()"><i class="fa-solid fa-check"></i> Done</button>
+        </div>
+
+        <div class="icon-grid-section-title">SYSTEM THEME</div>
+        <div class="toggle-row">
+          <i class="lead fa-solid fa-palette"></i>
+          <div class="t-info">
+            <div class="t-name">Use System Color</div>
+            <div class="t-sub">Symbol follows the WebOS theme accent color</div>
+          </div>
+          <button class="switch on" id="iconColorSystemToggle" onclick="SM.toggleIconColorSystem(this)"></button>
+        </div>
+
+        <div id="iconColorCustomRow" style="display:none; margin-top:14px;">
+          <div class="icon-grid-section-title">PRESET COLORS</div>
+          <div class="color-swatch-grid" id="iconColorSwatchGrid"></div>
+
+          <div class="icon-grid-section-title" style="margin-top:14px;">CUSTOM</div>
+          <input type="text" id="iconColorInput" placeholder="#ff512f or rgba(255,80,40,1)" oninput="SM.updateIconColorPreview(this.value)" style="width:100%; background:var(--bg2); border:1.5px solid var(--border); border-radius:11px; color:var(--fg); padding:12px 13px; font-size:13px; outline:none;">
+          <div class="hint" style="margin-top:6px;">Solid colors only — gradients don't apply to symbol glyphs.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COLOR PICKER SHEET (matches WebOS) ============ -->
+  <div class="sheet-ov" id="colorOv" onclick="if(event.target===this)SM.closeColorPicker()">
+    <div class="sheet">
+      <div class="sheet-bar"></div>
+      <div class="sheet-head"><h3>App Background</h3><button class="icon-btn" onclick="SM.closeColorPicker()"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="sheet-body">
+        <div class="color-preview-container">
+          <div class="color-preview-icon" id="colorPreviewIcon"></div>
+          <span class="color-preview-label" id="colorPreviewLabel">App Name</span>
+        </div>
+        <div class="icon-grid-section-title">SYSTEM THEME BACKGROUNDS</div>
+        <div class="color-swatch-grid" id="colorSwatchSystem"></div>
+
+        <div class="icon-grid-section-title">PRESETS</div>
+        <div class="color-swatch-grid" id="colorSwatchGrid"></div>
+
+        <div class="icon-grid-section-title">CUSTOM</div>
+        <input type="text" id="customColorInput" placeholder="#e8a83e or linear-gradient(135deg, #ff512f, #dd2476)" oninput="SM.updateColorPreview(this.value)" style="width:100%; background:var(--bg2); border:1.5px solid var(--border); border-radius:11px; color:var(--fg); padding:12px 13px; font-size:13px; outline:none;">
+        <button class="btn btn-p" onclick="SM.saveColorPicker()" style="margin-top:16px;">
+          <i class="fa-solid fa-check"></i> Apply Background
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FOLDER ICON PICKER SHEET (mirrors WebOS icon page) ============ -->
+  <div class="sheet-ov" id="catEmojiOv" onclick="if(event.target===this)SM.closeCatEmojiPicker()">
+    <div class="sheet">
+      <div class="sheet-bar"></div>
+      <div class="sheet-head"><h3>Pick Folder Icon</h3><button class="icon-btn" onclick="SM.closeCatEmojiPicker()"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="sheet-body">
+        <div class="icon-preview-bar">
+          <div class="ip-icon" id="catIpPreviewIcon"></div>
+          <div class="ip-mid">
+            <div class="ip-name" id="catIpName">Folder</div>
+            <div class="ip-sub" id="catIpSub">Default — 📁</div>
+          </div>
+          <button class="btn btn-p" onclick="SM.saveCatEmojiPicker()"><i class="fa-solid fa-check"></i> Save</button>
+        </div>
+
+        <div class="icon-grid-section-title">TYPE AN EMOJI</div>
+        <div class="icon-custom-row">
+          <input type="text" id="catEmojiText" placeholder="Type emoji" oninput="SM.onCatEmojiText(this.value)">
+          <button class="btn btn-s" onclick="SM.clearCatEmojiCustom()">Clear</button>
+        </div>
+
+        <div class="icon-grid-section-title">SYMBOLS</div>
+        <input type="text" id="catEmojiSearch" placeholder="Search symbols… (star, rocket, dragon)" oninput="SM.renderCatEmojiGrids(this.value)" style="margin-bottom:12px; width:100%; background:var(--bg2); border:1.5px solid var(--border); border-radius:11px; color:var(--fg); padding:12px 13px; font-size:14px; outline:none;">
+        <div class="icon-grid" id="catEmojiGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BULK ADD APPS SHEET ============ -->
+  <div class="sheet-ov" id="bulkAddOv" onclick="if(event.target===this)SM.closeBulkAdd()">
+    <div class="sheet">
+      <div class="sheet-bar"></div>
+      <div class="sheet-head"><h3 id="bulkAddTitle">Add Apps to Category</h3><button class="icon-btn" onclick="SM.closeBulkAdd()"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="sheet-body">
+        <div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="bulkAddSearch" placeholder="Search apps, authors, paths…" oninput="SM.renderBulkAddList()"></div>
+        <div id="bulkAddList"></div>
+      </div>
+      <div class="sheet-foot">
+        <button class="btn btn-s" style="flex:1;" onclick="SM.closeBulkAdd()">Cancel</button>
+        <button class="btn btn-p" style="flex:2;" onclick="SM.saveBulkAdd()"><i class="fa-solid fa-check"></i> Add Selected</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MASS EDIT APPS SHEET ============ -->
+  <div class="sheet-ov" id="massEditOv" onclick="if(event.target===this)SM.closeMassEdit()">
+    <div class="sheet">
+      <div class="sheet-bar"></div>
+      <div class="sheet-head"><h3>Mass Edit Apps</h3><button class="icon-btn" onclick="SM.closeMassEdit()"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="sheet-body">
+        <div class="hint" style="margin-bottom:10px;">1 · Pick apps below. 2 · Check the fields to change. 3 · Apply — only checked fields are touched.</div>
+        <div class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="massEditSearch" placeholder="Search apps, authors, paths…" oninput="SM.renderMassEditList()"></div>
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <button class="btn btn-s btn-sm" style="flex:1;" onclick="SM.massEditSelectAll(true)"><i class="fa-solid fa-check-double"></i> Select All</button>
+          <button class="btn btn-s btn-sm" style="flex:1;" onclick="SM.massEditSelectAll(false)"><i class="fa-solid fa-xmark"></i> Clear Selection</button>
+        </div>
+        <div id="massEditList"></div>
+
+        <div class="icon-grid-section-title" style="margin-top:18px;">CHANGES TO APPLY</div>
+
+        <div class="me-row" id="meAuthorRow">
+          <div class="me-head">
+            <label class="me-check"><input type="checkbox" id="meAuthorOn" onchange="SM.meRowToggle('meAuthorRow', this)"><span><i class="fa-solid fa-user-pen" style="width:16px; color:var(--fg2);"></i> Author</span></label>
+          </div>
+          <div class="me-body"><input type="text" class="me-input" id="meAuthor" placeholder="Author for all selected apps"></div>
+        </div>
+
+        <div class="me-row" id="meDescRow">
+          <div class="me-head">
+            <label class="me-check"><input type="checkbox" id="meDescOn" onchange="SM.meRowToggle('meDescRow', this)"><span><i class="fa-solid fa-align-left" style="width:16px; color:var(--fg2);"></i> Description</span></label>
+          </div>
+          <div class="me-body"><textarea class="me-input" id="meDesc" placeholder="Description for all selected apps" style="min-height:60px; resize:vertical;"></textarea></div>
+        </div>
+
+        <div class="me-row" id="meColorRow">
+          <div class="me-head">
+            <label class="me-check"><input type="checkbox" id="meColorOn" onchange="SM.meRowToggle('meColorRow', this)"><span><i class="fa-solid fa-palette" style="width:16px; color:var(--fg2);"></i> Background</span></label>
+          </div>
+          <div class="me-body">
+            <div class="me-swatch-grid" id="meColorSwatches"></div>
+            <input type="text" class="me-input" id="meColor" placeholder="#e8a83e or linear-gradient(135deg, #ff512f, #dd2476)" oninput="SM.meCustomSwatch('meColorSwatches')">
+          </div>
+        </div>
+
+        <div class="me-row" id="meIconColorRow">
+          <div class="me-head">
+            <label class="me-check"><input type="checkbox" id="meIconColorOn" onchange="SM.meRowToggle('meIconColorRow', this)"><span><i class="fa-solid fa-droplet" style="width:16px; color:var(--fg2);"></i> Symbol Color</span></label>
+          </div>
+          <div class="me-body">
+            <div class="me-seg">
+              <button id="meIconColorSys" class="on" onclick="SM.meIconColorMode(true)"><i class="fa-solid fa-wand-magic-sparkles"></i> System Color</button>
+              <button id="meIconColorCustom" onclick="SM.meIconColorMode(false)"><i class="fa-solid fa-paintbrush"></i> Custom Color</button>
+            </div>
+            <div id="meIconColorCustomWrap" style="display:none;">
+              <div class="me-swatch-grid" id="meIconColorSwatches"></div>
+              <input type="text" class="me-input" id="meIconColor" placeholder="#db2777" oninput="SM.meCustomSwatch('meIconColorSwatches')">
+            </div>
+          </div>
+        </div>
+
+        <div class="me-row" id="meFeaturedRow">
+          <div class="me-head">
+            <label class="me-check"><input type="checkbox" id="meFeaturedOn" onchange="SM.meRowToggle('meFeaturedRow', this)"><span><i class="fa-solid fa-star" style="width:16px; color:var(--fg2);"></i> Featured</span></label>
+            <button class="switch" id="meFeaturedSw" onclick="SM.toggleSwitch(this)" title="Target state for selected apps"></button>
+          </div>
+        </div>
+
+        <div class="me-row" id="meNewRow">
+          <div class="me-head">
+            <label class="me-check"><input type="checkbox" id="meNewOn" onchange="SM.meRowToggle('meNewRow', this)"><span><i class="fa-solid fa-wand-magic-sparkles" style="width:16px; color:var(--fg2);"></i> New</span></label>
+            <button class="switch" id="meNewSw" onclick="SM.toggleSwitch(this)" title="Target state for selected apps"></button>
+          </div>
+        </div>
+
+        <div class="me-row" id="mePinnedRow">
+          <div class="me-head">
+            <label class="me-check"><input type="checkbox" id="mePinnedOn" onchange="SM.meRowToggle('mePinnedRow', this)"><span><i class="fa-solid fa-thumbtack" style="width:16px; color:var(--fg2);"></i> Pinned</span></label>
+            <button class="switch" id="mePinnedSw" onclick="SM.toggleSwitch(this)" title="Target state for selected apps"></button>
+          </div>
+        </div>
+
+        <div class="me-row" id="meHiddenRow">
+          <div class="me-head">
+            <label class="me-check"><input type="checkbox" id="meHiddenOn" onchange="SM.meRowToggle('meHiddenRow', this)"><span><i class="fa-solid fa-eye-slash" style="width:16px; color:var(--fg2);"></i> Hidden</span></label>
+            <button class="switch" id="meHiddenSw" onclick="SM.toggleSwitch(this)" title="Target state for selected apps"></button>
+          </div>
+        </div>
+
+        <div class="hint" style="margin-top:4px;">Background swatches match the single-app editor. Symbol Color only shows on apps using an FA symbol.</div>
+      </div>
+      <div class="sheet-foot">
+        <button class="btn btn-s" style="flex:1;" onclick="SM.closeMassEdit()">Cancel</button>
+        <button class="btn btn-p" style="flex:2;" onclick="SM.saveMassEdit()"><i class="fa-solid fa-check"></i> Apply to Selected</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CATEGORY EDITOR SHEET ============ -->
+  <div class="sheet-ov" id="catOv" onclick="if(event.target===this)SM.closeCatEditor()">
+    <div class="sheet">
+      <div class="sheet-bar"></div>
+      <div class="sheet-head"><h3 id="catEditorTitle">Edit Category</h3><button class="icon-btn" onclick="SM.closeCatEditor()"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="sheet-body">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+          <div class="cat-emoji" id="catEditEmoji" style="width:52px; height:52px; font-size:24px;" onclick="SM.openCatEmojiPicker('edit')">📁</div>
+          <div class="field" style="flex:1; margin:0;"><label>Display Name</label><input type="text" id="catEditName"></div>
+        </div>
+        <div class="field"><label>ID (used in app tags)</label><input type="text" id="catEditId" readonly><div class="hint">The ID is fixed — apps reference it by this ID.</div></div>
+        <div class="folder-note" id="catEditNote" style="display:none;"></div>
+        <div class="toggle-row" id="catDownloadRow" style="display:none; margin-top:8px;">
+          <i class="lead fa-solid fa-circle-down"></i>
+          <div class="t-info"><div class="t-name">Allow Folder Download</div><div class="t-sub">Show a “Download All” button in the store (off by default)</div></div>
+          <button class="switch" id="catDownloadSwitch" onclick="SM.toggleSwitch(this)"></button>
+        </div>
+        <div class="toggle-row" id="catHiddenRow" style="display:none;">
+          <i class="lead fa-solid fa-eye-slash"></i>
+          <div class="t-info"><div class="t-name">Hidden</div><div class="t-sub">Hide this folder/category from the store</div></div>
+          <button class="switch" id="catHiddenSwitch" onclick="SM.toggleSwitch(this)"></button>
+        </div>
+        <div class="folder-note" id="catPosLabel" style="display:none; text-align:center; font-weight:700; color:var(--fg2); padding:10px; background:var(--bg3); border-radius:10px;"></div>
+        <div id="catMoveBtns" style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn btn-s" style="flex:1;" onclick="SM.moveCat(-1)"><i class="fa-solid fa-arrow-up"></i> Up</button>
+          <button class="btn btn-s" style="flex:1;" onclick="SM.moveCat(1)"><i class="fa-solid fa-arrow-down"></i> Down</button>
+        </div>
+        <div style="height:16px;"></div>
+      </div>
+      <div class="sheet-foot">
+        <button class="btn btn-p" style="flex:2;" onclick="SM.saveCatEdit()"><i class="fa-solid fa-check"></i> Save</button>
+        <button class="btn btn-d" style="flex:1;" id="catDeleteBtn" onclick="SM.deleteCat()"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-box" id="toasts"></div>
+</div>
+
+<script>
+'use strict';
+/* ==================================================================
+   STORE MANAGER v2 — your repo IS the store; the JSON is the pizazz.
+   - Repo catalog: scanned live from GitHub (every HTML = an app,
+     folders = categories) — identical to what WebOS reads by default.
+   - Entries: ONLY your customizations (icons, authors, backgrounds,
+     featured/new/pinned/hidden, custom categories, extra apps).
+   Export produces the small store.json that layers on top of the
+   repo inside the WebOS App Store.
+==================================================================== */
+const SM = {
+  DEFAULT_REPO: 'Kadharriminecraft/official-list',
+  data: { webos_store: 2, version: 2, repo: 'Kadharriminecraft/official-list', updated_at: '', categories: [], apps: [] },
+  catalog: { repo: '', branch: 'main', loaded: false, apps: [], folderCats: [] },
+  storeUrl: '',
+  savedSnapshot: '',
+  editingKey: null,        /* 'p:<path>' for repo apps | 'u:<uid>' for added apps | null for new */
+  editSourceMode: 'github',
+  editColor: '', editIcon: '', editIconColor: '',
+  _selectedTags: new Set(),
+  catEditId: null,
+  emojiPickerTarget: null,
+
+  /* ---------- boot ---------- */
+  init() {
+    this._browse = null;            /* null = root view; {kind:'folder',trail:[...]} = folder trail; {kind:'tag',id} = custom-cat browse */
+    this._editingFolderPath = null;
+    this.storeUrl = localStorage.getItem('sm_store_url') || '';
+    const saved = localStorage.getItem('sm_store_data');
+    let ok = false;
+    if (saved) { try { this.loadData(JSON.parse(saved), true); ok = true; } catch (e) {} }
+    if (!ok) { this.data = { webos_store: 2, version: 2, repo: this.DEFAULT_REPO, updated_at: '', categories: [], apps: [] }; this.savedSnapshot = this.serialize(); this.persist(); }
+    const cat = localStorage.getItem('sm_catalog');
+    if (cat) { try { const c = JSON.parse(cat); if (c && Array.isArray(c.apps)) this.catalog = c; } catch (e) {} }
+    /* Upgrade legacy segment-slug folder keys to full-path slugs so
+       same-named folders become independent (see migrateFolderKeys). */
+    this.migrateFolderKeys();
+    $('storeUrlField').value = this.storeUrl;
+    $('repoField').value = this.data.repo;
+    /* GitHub push fields — token from this device, branch from the scanned catalog */
+    $('ghTokenField').value = localStorage.getItem('sm_github_token') || '';
+    $('ghBranchField').value = this.ghBranchDefault();
+    $('ghPathField').value = 'store.json';
+    $('ghTokenRepoHint').textContent = this.data.repo;
+    /* Initialize the new-cat tile's dataset so getNewCatEmoji works */
+    this.setNewCatEmoji('');
+    this.renderAll();
+  },
+
+  /* ---------- data io ---------- */
+  loadData(data, silent) {
+    if (!data || !Array.isArray(data.apps)) throw new Error('Not a store JSON');
+    this.data = {
+      webos_store: 2, version: 2,
+      repo: (typeof data.repo === 'string' && /^[^\/\s]+\/[^\/\s]+$/.test(data.repo.trim())) ? data.repo.trim() : this.DEFAULT_REPO,
+      updated_at: data.updated_at || '',
+      categories: (Array.isArray(data.categories) ? data.categories : []).filter(c => c && c.id).map(c => ({ id: String(c.id), name: c.name || c.id, icon: c.icon || '📁', download: c.download === true, hidden: !!c.hidden })),
+      apps: data.apps.map(a => this.normEntry(a)).filter(Boolean)
+    };
+    this.savedSnapshot = this.serialize();
+    this.persist();
+    /* re-key legacy folder overrides/tags for the newly loaded data (needs
+       the scanned catalog tree); idempotent */
+    this.migrateFolderKeys();
+    if (!silent) { this.renderAll(); toast('Store loaded — ' + this.data.apps.length + ' entries', 'ok'); }
+  },
+
+  /* ---------- one-time migration: legacy segment-slug keys → full-path slugs ----------
+     OLD system: a folder override / bulk-added tag was keyed on the LAST path
+     segment's slug (games/tools → 'tools'), so three folders named "tools"
+     shared ONE override — renaming one renamed all of them, and their apps'
+     tags were intertwined. NEW system: every folder is keyed on slug(fullPath)
+     ('games-tools'), so folders act like real folders. This migration rewrites
+     unambiguous legacy keys once; ambiguous ones (several folders share the
+     name) are left alone so each folder can be re-targeted by hand. */
+  migrateFolderKeys() {
+    if (!this.catalog.folderTree || !this.catalog.folderTree.length) return 0;
+    const folders = [];
+    const walk = nodes => nodes.forEach(nd => { folders.push(nd.path); if (nd.folders && nd.folders.length) walk(nd.folders); });
+    walk(this.catalog.folderTree);
+    const fullSlugs = new Set(folders.map(p => this.slugify(p)));
+    const topSlugs = new Set(folders.filter(p => !p.includes('/')).map(p => this.slugify(p)));
+    /* owners of a segment slug = NESTED folders whose last segment matches */
+    const ownersOf = seg => folders.filter(p => p.includes('/') && this.slugify(p.split('/').pop()) === seg);
+    let n = 0;
+    /* 1. folder overrides: {id:'arcade'} → {id:'games-arcade'} when games/arcade
+          is the one and only 'arcade' and no top-level 'arcade' exists */
+    this.data.categories.forEach(c => {
+      if (fullSlugs.has(c.id) || topSlugs.has(c.id)) return;   /* already fine / top-level override */
+      const owners = ownersOf(c.id);
+      if (owners.length === 1) {
+        const nid = this.slugify(owners[0]);
+        if (!this.data.categories.some(x => x.id === nid)) { c.id = nid; n++; }
+      }
+    });
+    /* 2. bulk-added tags on entries — same unambiguous rule. Tags that are
+          custom-category ids keep their meaning (checked AFTER step 1 so a
+          migrated override also pulls its tagged apps along). */
+    const catIds = new Set(this.data.categories.map(c => c.id));
+    this.data.apps.forEach(e => {
+      e.tags = e.tags.map(t => {
+        if (fullSlugs.has(t) || topSlugs.has(t) || catIds.has(t)) return t;
+        const owners = ownersOf(t);
+        if (owners.length === 1) {
+          const nid = this.slugify(owners[0]);
+          if (!e.tags.includes(nid)) { n++; return nid; }
+        }
+        return t;
+      });
+    });
+    if (n) { this.persist(); toast('Folder data upgraded — same-named folders now act independently', 'info'); }
+    return n;
+  },
+  normEntry(a) {
+    if (!a || typeof a !== 'object' || !a.name) return null;
+    return {
+      uid: a.uid || this.genUid(),
+      name: String(a.name), rawName: a.rawName || '',
+      author: a.author || '', description: a.description || '',
+      icon: a.icon || '', color: a.color || '', iconColor: a.iconColor || '',
+      tags: Array.isArray(a.tags) ? a.tags.filter(t => t !== null && t !== undefined && t !== '').map(String) : [],
+      featured: !!a.featured, isNew: !!(a.isNew || a.new), pinned: !!a.pinned, hidden: !!a.hidden,
+      source: (a.source === 'url' || a.url) ? 'url' : 'github',
+      repo: a.repo || '', branch: a.branch || '', path: a.path || '', url: a.url || '',
+      size: +a.size || 0, type: a.type || 'HTML'
+    };
+  },
+  genUid() { return 'a' + Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 6); },
+  serialize() { return JSON.stringify(this.data); },
+  persist() {
+    try { localStorage.setItem('sm_store_data', this.serialize()); } catch (e) { toast('Storage full — export now!', 'err'); }
+    $('dirtyDot').classList.toggle('show', this.serialize() !== this.savedSnapshot);
+  },
+  markSaved() { this.data.updated_at = new Date().toISOString(); this.savedSnapshot = this.serialize(); this.persist(); this.renderAll(); },
+  undoAll() {
+    if (this.serialize() === this.savedSnapshot) { toast('No unsaved changes', 'info'); return; }
+    if (!confirm('Discard all changes since the last load/save?')) return;
+    try { this.loadData(JSON.parse(this.savedSnapshot), true); this.renderAll(); toast('Changes reverted', 'ok'); }
+    catch (e) { toast('Could not revert', 'err'); }
+  },
+  resetAll() {
+    if (!confirm('Delete ALL customizations (entries + custom categories)?\n\nThe repo itself is not touched.')) return;
+    this.data.categories = []; this.data.apps = [];
+    this.persist(); this.renderAll(); toast('All customizations cleared', 'ok');
+  },
+
+  /* ---------- repo catalog ---------- */
+  async scanRepo() {
+    const repo = $('repoField').value.trim() || this.data.repo;
+    if (!/^[^\/\s]+\/[^\/\s]+$/.test(repo)) { toast('Repo must look like owner/name', 'err'); return; }
+    $('scanBar').classList.add('active'); $('scanBar2').classList.add('active');
+    $('scanStatus').textContent = 'Scanning ' + repo + '…';
+    try {
+      let tree = null, branch = 'main';
+      for (const b of ['main', 'master']) {
+        try {
+          const res = await fetch(`https://api.github.com/repos/${repo}/git/trees/${b}?recursive=1`);
+          if (res.ok) { tree = (await res.json()).tree; branch = b; break; }
+        } catch (e) {}
+      }
+      if (!tree) throw new Error('repo unreachable or rate-limited');
+      const apps = [], folderCount = new Map();
+      const root = { path: '', name: '', folders: [], files: [] };
+      const ensureFolder = fp => {
+        if (!fp) return root;
+        let node = root, cur = '';
+        for (const seg of fp.split('/')) {
+          cur = cur ? cur + '/' + seg : seg;
+          let next = node.folders.find(f => f.path === cur);
+          if (!next) { next = { path: cur, name: seg, folders: [], files: [] }; node.folders.push(next); }
+          node = next;
+        }
+        return node;
+      };
+      let hasStoreJson = false;
+      tree.forEach(item => {
+        if (item.type !== 'blob') return;
+        const rawName = item.path.split('/').pop();
+        if (rawName.startsWith('.') || rawName === 'README.md' || rawName === 'LICENSE') return;
+        if (item.path.toLowerCase() === 'store.json') { hasStoreJson = true; return; }  /* store config, not an app */
+        const parts = item.path.split('/'); parts.pop();
+        /* Tags = slugged PATH PREFIXES (games/arcade/x → 'games', 'games-arcade').
+           Each folder owns a unique tag built from its whole path, so
+           same-named folders in different places never intertwine — while
+           parent folders still collect everything beneath them. */
+        const tags = [];
+        let cur = '';
+        for (const seg of parts) {
+          cur = cur ? cur + '/' + seg : seg;
+          const t = this.slugify(cur);
+          if (t && !tags.includes(t)) tags.push(t);
+        }
+        tags.forEach(t => folderCount.set(t, (folderCount.get(t) || 0) + 1));
+        const app = { path: item.path, name: this.cleanName(rawName), rawName, tags, size: item.size || 0, type: this.getFileType(rawName) };
+        apps.push(app);
+        ensureFolder(parts.join('/')).files.push(app);
+      });
+      /* folderCats = PATH-PREFIX slugs from folderCount (one per folder,
+         unique even for same-named folders — matches how apps are tagged
+         and how the WebOS store resolves folder overrides). */
+      this.catalog = { repo, branch, loaded: true, apps, folderTree: root.folders, folderCats: [...folderCount.keys()].sort().map(id => ({ id, name: this.titleCase(id) })) };
+      try { localStorage.setItem('sm_catalog', JSON.stringify(this.catalog)); } catch (e) {}
+      this.data.repo = repo;
+      $('repoField').value = repo;
+      $('ghBranchField').value = branch;
+      $('ghTokenRepoHint').textContent = repo;
+      this.persist();
+      /* re-key legacy folder overrides/tags against the fresh tree */
+      this.migrateFolderKeys();
+      this.renderAll();
+      toast('Catalog loaded — ' + apps.length + ' apps' + (hasStoreJson ? ' · store.json found' : ''), 'ok');
+      /* if the repo already carries a store.json, continue editing from it */
+      if (hasStoreJson) {
+        const rawUrl = `https://raw.githubusercontent.com/${repo}/${branch}/store.json`;
+        $('storeUrlField').value = rawUrl;
+        try {
+          const res = await fetch(rawUrl + '?_t=' + Date.now());
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Array.isArray(data.apps)) {
+              const hasLocal = this.data.apps.length > 0 || this.data.categories.length > 0;
+              if (!hasLocal || confirm("This repo already has a store.json.\n\nLoad it and continue editing? (Current entries are replaced)")) {
+                this.loadData(data);
+              }
+            }
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      toast('Scan failed: ' + e.message, 'err');
+      $('scanStatus').textContent = 'Scan failed';
+    } finally { $('scanBar').classList.remove('active'); $('scanBar2').classList.remove('active'); }
+  },
+  applyRepoField() { this.scanRepo(); },
+  slugify(s) { return String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || ''; },
+  titleCase(s) { return String(s).replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).trim(); },
+  cleanName(f) { return f.replace(/\.(html?|swf|js|json|css|zip|png|jpg|gif|svg|md|txt)$/i, '').replace(/[-_]+/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase()).trim(); },
+  getFileType(n) { const e = n.split('.').pop().toLowerCase(); return ({ html:'HTML', htm:'HTML', swf:'Flash', js:'JS', json:'JSON', css:'CSS', zip:'Archive', png:'Image', jpg:'Image', gif:'Image', svg:'SVG', md:'Doc' })[e] || e.toUpperCase(); },
+
+  /* ---------- entries <-> catalog ---------- */
+  entryFor(path) { return this.data.apps.find(e => e.path === path && !e.repo && !e.url) || null; },
+  entryByUid(uid) { return this.data.apps.find(e => e.uid === uid) || null; },
+  /* merged view model: every catalog app (+ its entry) then added-only entries */
+  mergedApps() {
+    const out = [];
+    const catalogSet = new Set();
+    if (this.catalog.loaded) {
+      this.catalog.apps.forEach(c => {
+        catalogSet.add(c.path);
+        const e = this.entryFor(c.path);
+        out.push({ key: 'p:' + c.path, catalog: c, entry: e,
+          name: (e && e.name) || c.name, author: e ? e.author : '',
+          icon: e ? e.icon : '', color: e ? e.color : '', iconColor: e ? e.iconColor : '',
+          tags: [...new Set([...(c.tags || []), ...(e ? e.tags : [])])],
+          featured: e ? e.featured : false, isNew: e ? e.isNew : false, pinned: e ? e.pinned : false,
+          hidden: e ? e.hidden : false, added: false });
+      });
+    }
+    /* entries that are NOT plain customizations of catalog apps = added apps */
+    this.data.apps.forEach(e => {
+      const isCatalogOverride = !e.url && !e.repo && catalogSet.has(e.path);
+      if (!isCatalogOverride) {
+        out.push({ key: 'u:' + e.uid, catalog: null, entry: e,
+          name: e.name, author: e.author, icon: e.icon, color: e.color, iconColor: e.iconColor || '',
+          tags: e.tags, featured: e.featured, isNew: e.isNew, pinned: e.pinned,
+          hidden: e.hidden, added: true });
+      }
+    });
+    return out;
+  },
+
+  /* ---------- views ---------- */
+  switchView(v) {
+    document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+    $('view-' + v).classList.add('active');
+    document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+    $('mainScroll').scrollTop = 0;
+    if (v === 'cats') { this._browse = null; this.renderCats(); }
+    if (v === 'export') this.renderExportStats();
+  },
+  renderAll() { this.renderDash(); this.renderAppList(); this.renderCats(); this.renderExportStats(); },
+
+  /* ---------- dashboard ---------- */
+  renderDash() {
+    $('stCatalog').textContent = this.catalog.loaded ? this.catalog.apps.length : '—';
+    $('stFeat').textContent = this.data.apps.filter(e => e.featured).length;
+    $('stNew').textContent = this.data.apps.filter(e => e.isNew).length;
+    $('stCustom').textContent = this.data.apps.length;
+    if (this.catalog.loaded) {
+      $('scanStatus').textContent = this.catalog.repo + ' · ' + this.catalog.apps.length + ' apps';
+      $('scanSub').textContent = this.catalog.folderCats.length + ' folder categories · branch ' + this.catalog.branch;
+    }
+
+    const merged = new Map(this.mergedApps().map(m => [m.key, m]));
+    const entryRow = (e, flag) => {
+      const m = merged.get(e.url || e.repo ? 'u:' + e.uid : 'p:' + e.path) || { name: e.name, author: e.author, icon: e.icon, color: e.color };
+      const list = this.data.apps.filter(x => x[flag]);
+      const isFirst = list[0] && list[0].uid === e.uid, isLast = list[list.length - 1] && list[list.length - 1].uid === e.uid;
+      return `<div class="order-row">
+        <div class="order-ico" style="background:${this.colorOf(m)};">${this.iconHTML(m)}</div>
+        <div class="order-info"><div class="order-name">${this.esc(m.name)}</div><div class="order-sub">${this.esc(e.author || (e.path || e.url || ''))}</div></div>
+        <div class="order-btns">
+          <button class="obtn ${isFirst ? 'off' : ''}" onclick="SM.reorder('${e.uid}','${flag}',-1)"><i class="fa-solid fa-arrow-up"></i></button>
+          <button class="obtn ${isLast ? 'off' : ''}" onclick="SM.reorder('${e.uid}','${flag}',1)"><i class="fa-solid fa-arrow-down"></i></button>
+          <button class="obtn" onclick="SM.openAppEditor('${(e.url || e.repo) ? 'u:' + e.uid : 'p:' + encodeURIComponent(e.path)}')"><i class="fa-solid fa-pen"></i></button>
+        </div></div>`;
+    };
+    const feat = this.data.apps.filter(e => e.featured);
+    const news = this.data.apps.filter(e => e.isNew);
+    $('dashFeatured').innerHTML = feat.length ? feat.map(e => entryRow(e, 'featured')).join('')
+      : '<div class="empty" style="padding:14px;"><div class="e-sub">Nothing featured — tap ⭐ in the Apps tab.</div></div>';
+    $('dashNew').innerHTML = news.length ? news.map(e => entryRow(e, 'isNew')).join('')
+      : '<div class="empty" style="padding:14px;"><div class="e-sub">Nothing marked new.</div></div>';
+  },
+  reorder(uid, flag, dir) {
+    const apps = this.data.apps;
+    const idx = apps.findIndex(a => a.uid === uid);
+    if (idx < 0) return;
+    let j = idx + dir;
+    while (j >= 0 && j < apps.length && !apps[j][flag]) j += dir;
+    if (j < 0 || j >= apps.length) return;
+    [apps[idx], apps[j]] = [apps[j], apps[idx]];
+    this.persist(); this.renderDash();
+  },
+
+  /* ---------- app list ---------- */
+  /* onclick-safe key: 'p:' paths get URI-encoded so spaces/quotes in file names are safe */
+  safeKey(key) { return key.startsWith('p:') ? 'p:' + encodeURIComponent(key.slice(2)) : key; },
+  decodeKey(key) { return key.startsWith('p:') ? 'p:' + decodeURIComponent(key.slice(2)) : key; },
+  renderAppList() {
+    const q = ($('appSearch').value || '').toLowerCase().trim();
+    let rows = this.mergedApps();   /* hidden apps stay listed so they can be unhidden */
+    if (q) rows = rows.filter(m => [m.name, m.author, m.tags.join(' '), m.catalog ? m.catalog.path : (m.entry.url || m.entry.repo + '/' + m.entry.path)].join(' ').toLowerCase().includes(q));
+    /* Sort: pinned first, then featured, then alphabetical — matches the
+       sort used inside folder & category browse views so the user always
+       sees curated picks at the top of every list. */
+    rows.sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || (b.featured - a.featured) || a.name.localeCompare(b.name));
+    $('appsList').innerHTML = rows.length ? rows.map(m => {
+      const unknown = m.tags.filter(t => !this.mergedCats().some(c => c.id === t));
+      const ok = this.safeKey(m.key);
+      return `<div class="app-row" onclick="SM.openAppEditor('${ok}')">
+        <div class="app-ico" style="background:${this.colorOf(m)};">${this.iconHTML(m)}</div>
+        <div class="app-row-info">
+          <div class="app-row-name">${this.esc(m.name)}</div>
+          <div class="app-row-sub">${this.esc(m.author || (m.catalog ? m.catalog.path : (m.entry.url || m.entry.repo + '/' + m.entry.path)))}</div>
+          <div class="badges">
+            ${m.added ? '<span class="badge a">ADDED</span>' : (m.entry ? '<span class="badge c">CUSTOMIZED</span>' : '')}
+            ${m.featured ? '<span class="badge f">FEATURED</span>' : ''}
+            ${m.isNew ? '<span class="badge n">NEW</span>' : ''}
+            ${m.pinned ? '<span class="badge p">PINNED</span>' : ''}
+            ${m.hidden ? '<span class="badge h">HIDDEN</span>' : ''}
+            ${m.added && !m.entry.url && !m.entry.repo ? '<span class="badge warn">NO SOURCE</span>' : ''}
+            ${unknown.length ? '<span class="badge warn">UNKNOWN TAG</span>' : ''}
+          </div>
+        </div>
+        <div class="quick-btns">
+          <button class="qbtn ${m.featured ? 'on-f' : ''}" title="Featured" onclick="event.stopPropagation(); SM.quickToggle('${ok}','featured')"><i class="fa-solid fa-star"></i></button>
+          <button class="qbtn ${m.isNew ? 'on-n' : ''}" title="New" onclick="event.stopPropagation(); SM.quickToggle('${ok}','isNew')"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+          <button class="qbtn ${m.pinned ? 'on-p' : ''}" title="Pinned" onclick="event.stopPropagation(); SM.quickToggle('${ok}','pinned')"><i class="fa-solid fa-thumbtack"></i></button>
+          <button class="qbtn ${m.hidden ? 'on-h' : ''}" title="${m.hidden ? 'Unhide' : 'Hide'}" onclick="event.stopPropagation(); SM.quickToggleHidden('${ok}')"><i class="fa-solid ${m.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
+        </div></div>`;
+    }).join('') : `<div class="empty"><div class="e-ico">📦</div><div class="e-title">No Apps</div><div class="e-sub">${q ? 'Nothing matches your search.' : (this.catalog.loaded ? 'The repo has no apps.' : 'Tap "Scan Repo Catalog" on the Home tab first.')}</div></div>`;
+  },
+  quickToggleHidden(key) {
+    const m = this.mergedApps().find(x => x.key === this.decodeKey(key));
+    if (!m) return;
+    let e = m.entry;
+    if (!e) {
+      if (!m.catalog) return;
+      e = this.newEntryForCatalog(m.catalog);
+      this.data.apps.push(e);
+    }
+    e.hidden = !e.hidden;
+    this.persist(); this.renderAppList(); this.renderCats(); this.renderDash(); this.renderExportStats();
+    toast(e.hidden ? 'Hidden from store: ' + m.name : 'Unhidden: ' + m.name, 'ok');
+  },
+  quickToggle(key, flag) {
+    const m = this.mergedApps().find(x => x.key === this.decodeKey(key));
+    if (!m) return;
+    let e = m.entry;
+    if (!e) {
+      if (!m.catalog) return;
+      e = this.newEntryForCatalog(m.catalog);
+      this.data.apps.push(e);
+    }
+    e[flag] = !e[flag];
+    this.persist(); this.renderAppList(); this.renderDash(); this.renderExportStats();
+  },
+  newEntryForCatalog(c) {
+    return { uid: this.genUid(), name: c.name, rawName: c.rawName, author: '', description: '', icon: '', color: '', iconColor: '', tags: [], featured: false, isNew: false, pinned: false, hidden: false, source: 'github', repo: '', branch: '', path: c.path, url: '', size: 0, type: 'HTML' };
+  },
+
+  /* ---------- app editor ---------- */
+  openAppEditor(key) {
+    key = key ? this.decodeKey(key) : null;
+    this.editingKey = key || null;
+    let m = null;
+    if (key) m = this.mergedApps().find(x => x.key === key);
+    const isNewApp = !key;
+    const isRepoApp = !!(m && m.catalog);
+
+    $('editorTitle').textContent = isNewApp ? 'Add App' : (isRepoApp ? 'Customize App' : 'Edit Added App');
+    $('edRepoBanner').style.display = isRepoApp ? 'flex' : 'none';
+    $('edSourceField').style.display = isRepoApp ? 'none' : 'block';
+    $('edResetBtn').style.display = (m && m.entry && isRepoApp) ? 'flex' : 'none';
+    $('edDeleteBtn').style.display = (!isRepoApp && m && m.entry) ? 'flex' : (isNewApp ? 'none' : 'flex');
+    if (isRepoApp) { $('edGithubFields').style.display = 'none'; $('edUrlFields').style.display = 'none'; }
+
+    const v = m || { name: '', author: '', description: '', icon: '', color: '', tags: [], featured: false, isNew: false, pinned: false, hidden: false, source: 'github', repo: '', branch: 'main', path: '', url: '', size: 0, type: 'HTML' };
+    const e = m ? (m.entry || v) : v;
+    $('edName').value = v.name || '';
+    $('edAuthor').value = (m && m.entry) ? (e.author || '') : '';
+    $('edDesc').value = (m && m.entry) ? (e.description || '') : '';
+    this.editIcon = (m && m.entry) ? (e.icon || '') : '';
+    this.editColor = (m && m.entry) ? (e.color || '') : '';
+    this.editIconColor = (m && m.entry) ? (e.iconColor || '') : '';
+    this.editSourceMode = (!isRepoApp && e.url) ? 'url' : 'github';
+    $('edRepo').value = (m && !isRepoApp && m.entry) ? (e.repo || '') : '';
+    $('edBranch').value = (m && !isRepoApp && m.entry) ? (e.branch || 'main') : 'main';
+    $('edPath').value = (m && !isRepoApp && m.entry) ? (e.path || '') : '';
+    $('edUrl').value = (m && !isRepoApp && m.entry) ? (e.url || '') : '';
+    /* file size/type not editable — defaults handled by newEntryForCatalog */
+    $('edFeatured').classList.toggle('on', !!(m && m.entry && e.featured));
+    $('edIsNew').classList.toggle('on', !!(m && m.entry && e.isNew));
+    $('edPinned').classList.toggle('on', !!(m && m.entry && e.pinned));
+    $('edHidden').classList.toggle('on', !!(m && m.entry && e.hidden));
+    if (!isRepoApp) this.setSourceMode(this.editSourceMode, null);
+
+    /* folder tags (info only) */
+    const ft = $('edFolderTags');
+    if (isRepoApp && m.catalog.tags.length) {
+      ft.style.display = 'block';
+      ft.innerHTML = 'From repo folders: ' + m.catalog.tags.map(t => `<span class="tag-chip locked" style="display:inline-flex;">${this.esc(this.catNameOf(t))}</span>`).join(' ');
+    } else ft.style.display = 'none';
+
+    this._selectedTags = new Set((m && m.entry) ? (e.tags || []) : []);
+    this.renderTagChips();
+    this.updateEditorPreview();
+    this.updateSymbolColorBtn();
+    $('editorOv').classList.add('active');
+  },
+  closeEditor() { $('editorOv').classList.remove('active'); },
+  setSourceMode(mode, btn) {
+    this.editSourceMode = mode;
+    if (btn) { document.querySelectorAll('#edSourceSeg button').forEach(b => b.classList.remove('on')); btn.classList.add('on'); }
+    else document.querySelectorAll('#edSourceSeg button').forEach(b => b.classList.toggle('on', (mode === 'url') === b.textContent.includes('link')));
+    $('edGithubFields').style.display = mode === 'github' ? 'block' : 'none';
+    $('edUrlFields').style.display = mode === 'url' ? 'block' : 'none';
+  },
+  toggleSwitch(el) { el.classList.toggle('on'); },
+  renderTagChips() {
+    const cats = this.mergedCats();
+    $('edTags').innerHTML = cats.length ? cats.map(c =>
+      `<button class="tag-chip ${this._selectedTags.has(c.id) ? 'on' : ''}" onclick="SM.toggleTag(this,'${this.esc(c.id)}')">${this.esc(c.icon || '')} ${this.esc(c.name)}</button>`
+    ).join('') : '<div class="hint" style="margin:0;">No categories yet — add some in the Categories tab first.</div>';
+  },
+  toggleTag(el, id) {
+    if (this._selectedTags.has(id)) this._selectedTags.delete(id); else this._selectedTags.add(id);
+    el.classList.toggle('on');
+    this.updateEditorPreview();
+  },
+  updateEditorPreview() {
+    const name = $('edName').value || 'App Name';
+    const author = $('edAuthor').value || 'no author';
+    const tags = [...this._selectedTags].map(t => this.catNameOf(t)).join(', ');
+    $('edPreviewIco').style.background = this.colorOf({ color: this.editColor });
+    $('edPreviewIco').innerHTML = this.iconHTML({ icon: this.editIcon, name, iconColor: this.editIconColor });
+    $('edPreviewName').textContent = name;
+    $('edPreviewSub').textContent = 'by ' + author + (tags ? ' · ' + tags : '');
+    $('edColorHint').textContent = this.editColor ? this.editColor.slice(0, 60) : 'default';
+  },
+  saveApp() {
+    const name = $('edName').value.trim();
+    if (!name) { toast('App name is required', 'err'); return; }
+    const key = this.editingKey;
+    const isRepoApp = key && key.startsWith('p:');
+    let entry = null;
+
+    if (isRepoApp) {
+      const path = decodeURIComponent(key.slice(2));
+      entry = this.entryFor(path);
+      if (!entry) {
+        const c = this.catalog.apps.find(x => x.path === path);
+        if (!c) { toast('App not in catalog — rescan the repo', 'err'); return; }
+        entry = this.newEntryForCatalog(c);
+        this.data.apps.push(entry);
+      }
+    } else if (key) {
+      entry = this.entryByUid(key.slice(2));
+      if (!entry) { toast('Entry missing', 'err'); return; }
+      if (this.editSourceMode === 'github') {
+        const repo = $('edRepo').value.trim(), path = $('edPath').value.trim();
+        if (!repo || !path) { toast('Repo and file path are required', 'err'); return; }
+        if (!/^[^\/\s]+\/[^\/\s]+$/.test(repo)) { toast('Repo must look like owner/name', 'err'); return; }
+        entry.repo = repo; entry.branch = $('edBranch').value.trim() || 'main'; entry.path = path; entry.url = '';
+      } else {
+        if (!$('edUrl').value.trim()) { toast('App URL is required', 'err'); return; }
+        entry.url = $('edUrl').value.trim(); entry.repo = ''; entry.branch = ''; entry.path = '';
+      }
+      entry.source = entry.url ? 'url' : 'github';
+    } else {
+      /* brand-new added app */
+      const base = { uid: this.genUid(), name, rawName: '', author: '', description: '', icon: '', color: '', iconColor: '', tags: [], featured: false, isNew: false, pinned: false, hidden: false, source: 'github', repo: '', branch: '', path: '', url: '', size: 0, type: 'HTML' };
+      if (this.editSourceMode === 'github') {
+        const repo = $('edRepo').value.trim(), path = $('edPath').value.trim();
+        if (!repo || !path) { toast('Repo and file path are required', 'err'); return; }
+        if (!/^[^\/\s]+\/[^\/\s]+$/.test(repo)) { toast('Repo must look like owner/name', 'err'); return; }
+        base.repo = repo; base.branch = $('edBranch').value.trim() || 'main'; base.path = path;
+      } else {
+        if (!$('edUrl').value.trim()) { toast('App URL is required', 'err'); return; }
+        base.url = $('edUrl').value.trim(); base.source = 'url';
+      }
+      this.data.apps.push(base);
+      entry = this.data.apps[this.data.apps.length - 1];
+    }
+
+    entry.name = name;
+    entry.author = $('edAuthor').value.trim();
+    entry.description = $('edDesc').value.trim();
+    entry.icon = this.editIcon;
+    entry.color = this.editColor;
+    entry.iconColor = this.editIconColor || '';
+    entry.tags = [...this._selectedTags];
+    entry.featured = $('edFeatured').classList.contains('on');
+    entry.isNew = $('edIsNew').classList.contains('on');
+    entry.pinned = $('edPinned').classList.contains('on');
+    entry.hidden = $('edHidden').classList.contains('on');
+    /* size & type not user-editable; defaults preserved from newEntryForCatalog */
+    if (!isRepoApp) { if (entry.source === 'url') { entry.repo = ''; entry.branch = ''; entry.path = ''; } else entry.url = ''; }
+
+    this.persist(); this.renderAll();
+    this.closeEditor();
+    toast(isRepoApp ? 'Customized: ' + name : 'Saved: ' + name, 'ok');
+  },
+  resetEntry() {
+    const key = this.editingKey;
+    if (!key || !key.startsWith('p:')) return;
+    const path = decodeURIComponent(key.slice(2));
+    const e = this.entryFor(path);
+    if (!e) { toast('Nothing to reset — this app is already default', 'info'); return; }
+    if (!confirm('Remove the customization for "' + e.name + '"?\nThe repo app stays in the store with its defaults.')) return;
+    this.data.apps = this.data.apps.filter(x => x !== e);
+    this.persist(); this.renderAll();
+    this.closeEditor();
+    toast('Reset to repo default', 'ok');
+  },
+  duplicateApp() {
+    const key = this.editingKey;
+    if (!key || !key.startsWith('u:')) { toast('Only added apps can be duplicated', 'info'); return; }
+    const e = this.entryByUid(key.slice(2));
+    if (!e) return;
+    const copy = JSON.parse(JSON.stringify(e));
+    copy.uid = this.genUid(); copy.name = e.name + ' Copy';
+    copy.featured = false; copy.isNew = false; copy.pinned = false;
+    this.data.apps.push(copy);
+    this.persist(); this.renderAll();
+    this.closeEditor();
+    toast('Duplicated', 'ok');
+  },
+  deleteApp() {
+    const key = this.editingKey;
+    if (!key) return;
+    if (key.startsWith('p:')) { this.resetEntry(); return; }
+    const e = this.entryByUid(key.slice(2));
+    if (!e || !confirm('Remove "' + e.name + '" from the store? (The source repo/file is not touched.)')) return;
+    this.data.apps = this.data.apps.filter(x => x.uid !== e.uid);
+    this.persist(); this.renderAll();
+    this.closeEditor();
+    toast('Removed from store', 'ok');
+  },
+
+  /* ---------- categories ---------- */
+  mergedCats() {
+    const custom = this.data.categories.map(c => ({ ...c, custom: true }));
+    const ids = new Set(custom.map(c => c.id));
+    const catIcons = { games:'🎮', tools:'🔧', audio:'🎵', video:'📹', social:'💬', education:'📚', developer:'💻', productivity:'📋', utilities:'🛠️', entertainment:'🎭', media:'📺', music:'🎶', art:'🎨', communication:'📡', finance:'💰', health:'❤️', news:'📰', photo:'📷', security:'🔒', sports:'⚽', travel:'✈️', weather:'🌤️', books:'📖', food:'🍔', shopping:'🛒', emulators:'🕹️', proxies:'🌐', ai:'🤖', chat:'💭' };
+    const folder = (this.catalog.loaded ? this.catalog.folderCats : []).filter(f => !ids.has(f.id)).map(f => ({ id: f.id, name: f.name, icon: catIcons[f.id] || '📁', folder: true }));
+    return [...custom, ...folder];
+  },
+  catNameOf(id) { const c = this.mergedCats().find(x => x.id === id); return c ? c.name : id; },
+  addCategory() {
+    const name = $('newCatName').value.trim();
+    if (!name) { toast('Give the category a name', 'err'); return; }
+    const id = this.slugify(name);
+    const iconVal = this.getNewCatEmoji() || '';
+    if (!this.data.categories.some(c => c.id === id) && this.catalog.loaded && this.catalog.folderCats.some(f => f.id === id)) {
+      /* name matches a folder category → create an override so it can be styled */
+      this.data.categories.push({ id, name, icon: iconVal });
+      $('newCatName').value = ''; this.setNewCatEmoji('');
+      this.persist(); this.renderCats(); this.renderDash(); this.renderTagChips && this.renderTagChips();
+      toast('Override created for folder category "' + name + '"', 'ok');
+      return;
+    }
+    if (this.data.categories.some(c => c.id === id)) { toast('That category already exists', 'err'); return; }
+    this.data.categories.push({ id, name, icon: iconVal });
+    $('newCatName').value = ''; this.setNewCatEmoji('');
+    this.persist(); this.renderCats(); this.renderDash();
+    toast('Category added: ' + name, 'ok');
+  },
+  /* ---------- categories & folder browsing ---------- */
+  findCatFolder(path) {
+    const tree = this.catalog.folderTree || [];
+    let nodes = tree, node = null, cur = '';
+    for (const seg of path.split('/')) {
+      cur = cur ? cur + '/' + seg : seg;
+      node = nodes.find(n => n.path === cur);
+      if (!node) return null;
+      nodes = node.folders;
+    }
+    return node;
+  },
+  overrideForPath(path) {
+    /* Folders are keyed on slug(fullPath) — every folder is its own entity,
+       so same-named folders (tools/, games/tools/, apps/tools/) never share
+       a rename/hide/download. Top-level ids are unchanged: slug('tools') is
+       both the segment and the full-path slug, so existing overrides keep
+       working. */
+    const full = this.slugify(path);
+    return this.data.categories.find(c => c.id === full) || null;
+  },
+  catCountFiles(node) {
+    /* Skip hidden subfolders when counting (matches the WebOS store view). */
+    return node.files.length + node.folders.reduce((n, f) => {
+      const so = this.overrideForPath(f.path);
+      return n + (so && so.hidden ? 0 : this.catCountFiles(f));
+    }, 0);
+  },
+  /* === Browse state ===
+     null                              = root view
+     { kind:'folder', trail:[...] }    = folder trail (nested browse)
+     { kind:'tag', id }                = custom-category browse (flat list of tagged apps) */
+  catBrowse(pathKey) {
+    const p = decodeURIComponent(pathKey);
+    if (!this._browse || this._browse.kind !== 'folder') this._browse = { kind: 'folder', trail: [] };
+    this._browse.trail.push(p);
+    this.renderCats();
+  },
+  catGoto(i) {
+    if (this._browse && this._browse.kind === 'folder') {
+      this._browse.trail = this._browse.trail.slice(0, i + 1);
+      this.renderCats();
+    }
+  },
+  catBrowseRoot() { this._browse = null; this.renderCats(); },
+  browseTag(id) { this._browse = { kind: 'tag', id }; this.renderCats(); },
+
+  /* === quick hide toggles for folders & custom categories === */
+  quickToggleFolderHidden(pathKey) {
+    const path = decodeURIComponent(pathKey);
+    /* Keyed on slug(fullPath) — the same identity overrideForPath() and
+       saveFolderEdit() use — so same-named folders toggle independently. */
+    const id = this.slugify(path);
+    let c = this.data.categories.find(x => x.id === id);
+    if (!c) {
+      const node = this.findCatFolder(path);
+      if (!node) return;
+      c = { id, name: node.name, icon: '📁', download: false, hidden: true };
+      this.data.categories.push(c);
+    } else {
+      c.hidden = !c.hidden;
+    }
+    this.persist();
+    this.renderCats(); this.renderDash(); this.renderAppList(); this.renderExportStats();
+    toast(c.hidden ? 'Folder hidden from store' : 'Folder unhidden', 'ok');
+  },
+  quickToggleCatHidden(id) {
+    const c = this.data.categories.find(x => x.id === id);
+    if (!c) return;
+    c.hidden = !c.hidden;
+    this.persist();
+    this.renderCats(); this.renderDash(); this.renderAppList(); this.renderExportStats();
+    toast(c.hidden ? 'Category hidden from store' : 'Category unhidden', 'ok');
+  },
+
+  /* === search helpers — filter files / apps / folders by query === */
+  fileMatches(f, q) {
+    if (!q) return true;
+    const e = this.entryFor(f.path);
+    const name = (e && e.name) || f.name;
+    const author = e ? (e.author || '') : '';
+    return [name, f.path, author].join(' ').toLowerCase().includes(q);
+  },
+  appMatches(m, q) {
+    if (!q) return true;
+    const tags = (m.tags || []).join(' ');
+    const path = m.catalog ? m.catalog.path : (m.entry ? (m.entry.url || (m.entry.repo + '/' + m.entry.path) || '') : '');
+    return [m.name, m.author || '', tags, path].join(' ').toLowerCase().includes(q);
+  },
+  /* recursively check if any file/subfolder inside `node` matches the query */
+  folderHasMatch(node, q) {
+    if (!q) return true;
+    if (node.files.some(f => this.fileMatches(f, q))) return true;
+    for (const sub of node.folders) {
+      const so = this.overrideForPath(sub.path);
+      const nm = ((so && so.name) || sub.name).toLowerCase();
+      if (nm.includes(q)) return true;
+      if (this.folderHasMatch(sub, q)) return true;
+    }
+    return false;
+  },
+
+  /* === main render — uniform file browser === */
+  renderCats() {
+    const el = $('catsList');
+    const tree = this.catalog.loaded ? (this.catalog.folderTree || null) : null;
+    const q = (($('catSearch') && $('catSearch').value) || '').toLowerCase().trim();
+    const showNewCatCard = !this._browse;     /* new-cat card hidden in browse mode */
+    $('catNewCard').style.display = showNewCatCard ? 'flex' : 'none';
+
+    /* --- folder trail browse view --- */
+    if (this._browse && this._browse.kind === 'folder' && this._browse.trail.length && tree) {
+      const trail = this._browse.trail;
+      const path = trail[trail.length - 1];
+      const node = this.findCatFolder(path);
+      if (node) { el.innerHTML = this.renderFolderBrowse(node, trail, q); return; }
+    }
+
+    /* --- custom-category (tag) browse view --- */
+    if (this._browse && this._browse.kind === 'tag') {
+      el.innerHTML = this.renderTagBrowse(this._browse.id, q); return;
+    }
+
+    /* --- root view: custom categories + top-level repo folders --- */
+    el.innerHTML = this.renderRootCats(q, tree);
+  },
+
+  /* folder trail: breadcrumb + small edit/hide actions on the CURRENT folder
+     (matching the custom-category browse view), then a full-width bulk-add
+     button + the subfolder/file list filtered by q. */
+  renderFolderBrowse(node, trail, q) {
+    const curPath = trail[trail.length - 1];
+    const folderSlug = this.slugify(curPath);   /* full-path tag — unique per folder */
+    const curOverride = this.overrideForPath(curPath);
+    const curHidden = !!(curOverride && curOverride.hidden);
+    const curDl = !!(curOverride && curOverride.download === true);
+    let html = `<div class="crumb-bar"><button class="crumb-btn" onclick="SM.catBrowseRoot()">📁 Folders</button>`;
+    trail.forEach((p, i) => {
+      const nd = this.findCatFolder(p), o = this.overrideForPath(p);
+      const nm = (o && o.name) || (nd ? nd.name : p.split('/').pop());
+      html += `<span class="crumb-sep">/</span><button class="crumb-btn ${i === trail.length - 1 ? 'cur' : ''}" onclick="SM.catGoto(${i})">${this.esc(nm)}</button>`;
+    });
+    /* spacer pushes the action buttons to the right edge of the breadcrumb
+       bar — when breadcrumbs wrap (deep nesting), the buttons land on their
+       own row's right edge instead of crowding the segments. */
+    html += `<span style="flex:1;"></span>`;
+    if (curDl) html += `<span class="badge a">DOWNLOADABLE</span>`;
+    if (curHidden) html += `<span class="badge h">HIDDEN</span>`;
+    html += `<button class="qbtn" title="Edit folder" onclick="event.stopPropagation(); SM.openFolderEditor('${encodeURIComponent(curPath)}')"><i class="fa-solid fa-pen" style="font-size:11px;"></i></button>`;
+    html += `<button class="qbtn ${curHidden ? 'on-h' : ''}" title="${curHidden ? 'Unhide' : 'Hide'}" onclick="event.stopPropagation(); SM.quickToggleFolderHidden('${encodeURIComponent(curPath)}')"><i class="fa-solid ${curHidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>`;
+    html += `</div>`;
+
+    /* Small but visible bulk-add button — opens the multi-select sheet so
+       you can tag apps with this folder's path slug (they then appear
+       in this exact folder in the WebOS store, even living elsewhere). */
+    html += `<button class="btn btn-s btn-sm" style="width:100%; margin-bottom:12px;" onclick="SM.openBulkAdd('folder','${encodeURIComponent(curPath)}')">
+      <i class="fa-solid fa-list-check"></i> Bulk add apps to this category
+    </button>`;
+
+    const subfolders = q ? node.folders.filter(sub => {
+      const so = this.overrideForPath(sub.path);
+      const nm = ((so && so.name) || sub.name).toLowerCase();
+      return nm.includes(q) || this.folderHasMatch(sub, q);
+    }) : node.folders;
+    const files = q ? node.files.filter(f => this.fileMatches(f, q)) : node.files;
+
+    subfolders.forEach(sub => {
+      const so = this.overrideForPath(sub.path);
+      const n = this.catCountFiles(sub);
+      const hidden = !!(so && so.hidden);
+      const dl = !!(so && so.download === true);
+      html += `<div class="cat-row" onclick="SM.catBrowse('${encodeURIComponent(sub.path)}')">
+        <div class="cat-emoji">${this.folderIconHTML(so && so.icon)}</div>
+        <div class="cat-info"><div class="cat-name">${this.esc((so && so.name) || sub.name)} <span class="repo-badge">REPO FOLDER</span>${hidden ? ' <span class="badge h">HIDDEN</span>' : ''}${dl ? ' <span class="badge a">DOWNLOADABLE</span>' : ''}</div>
+        <div class="cat-sub">${n} app${n !== 1 ? 's' : ''} · ${sub.folders.length} subfolder${sub.folders.length !== 1 ? 's' : ''}${so ? ' · customized' : ''}</div></div>
+        <button class="qbtn" title="Edit folder" onclick="event.stopPropagation(); SM.openFolderEditor('${encodeURIComponent(sub.path)}')"><i class="fa-solid fa-pen" style="font-size:11px;"></i></button>
+        <button class="qbtn ${hidden ? 'on-h' : ''}" title="${hidden ? 'Unhide' : 'Hide'}" onclick="event.stopPropagation(); SM.quickToggleFolderHidden('${encodeURIComponent(sub.path)}')"><i class="fa-solid ${hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
+        <i class="fa-solid fa-chevron-right" style="color:var(--fg3); font-size:13px;"></i>
+      </div>`;
+    });
+
+    /* Build a combined, pinned-first list of apps belonging to this folder.
+       Resident files (matched to entries) + tagged-but-not-resident apps
+       (bulk-tagged via the button above). Pinned apps always rise to the
+       top regardless of which bucket they came from — the user complaint
+       was "sometimes pinned apps don't show at the top", which happened
+       when a pinned app was in the tagged-extras section instead of the
+       resident section. */
+    const residentRows = files.map(f => {
+      const e = this.entryFor(f.path);
+      const m = { name: (e && e.name) || f.name, icon: e ? e.icon : '', color: e ? e.color : '', iconColor: e ? e.iconColor : '' };
+      return {
+        pinned: !!(e && e.pinned),
+        hidden: !!(e && e.hidden),
+        featured: !!(e && e.featured),
+        isNew: !!(e && e.isNew),
+        customized: !!e,
+        added: false,
+        name: m.name,
+        subtitle: f.path,
+        icon: m.icon,
+        color: m.color,
+        iconColor: m.iconColor || '',
+        key: 'p:' + encodeURIComponent(f.path),
+        isTaggedExtra: false
+      };
+    });
+    let taggedRows = [];
+    if (!q) {
+      const folderPathPrefix = curPath + '/';
+      const taggedExtra = this.mergedApps().filter(m => {
+        if (!m.tags.includes(folderSlug)) return false;
+        const appPath = m.catalog ? m.catalog.path : (m.entry ? m.entry.path : '');
+        return !appPath || !appPath.startsWith(folderPathPrefix);
+      });
+      taggedRows = taggedExtra.map(m => {
+        const path = m.catalog ? m.catalog.path : (m.entry ? (m.entry.url || (m.entry.repo + '/' + m.entry.path) || '') : '');
+        return {
+          pinned: !!m.pinned,
+          hidden: !!m.hidden,
+          featured: !!m.featured,
+          isNew: !!m.isNew,
+          customized: !!(m.entry && !m.added),
+          added: !!m.added,
+          name: m.name,
+          subtitle: m.author || path,
+          icon: m.icon,
+          color: m.color,
+          iconColor: m.iconColor,
+          key: this.safeKey(m.key),
+          isTaggedExtra: true
+        };
+      });
+    }
+    /* Sort: pinned first, then customized, then alphabetical (stable
+       fallback) so the order is deterministic when none of those apply. */
+    const allApps = [...residentRows, ...taggedRows]
+      .sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+                     || ((b.featured ? 1 : 0) - (a.featured ? 1 : 0))
+                     || a.name.localeCompare(b.name));
+
+    if (allApps.length) {
+      /* Section header for tagged apps — only show count of TAGGED ones
+         so users know there are non-resident apps mixed in. */
+      const taggedCount = taggedRows.length;
+      if (taggedCount && !q) {
+        html += `<div class="sec-title" style="margin-top:18px;">${taggedCount} tagged app${taggedCount !== 1 ? 's' : ''} added · pinned rise to the top</div>`;
+      }
+      allApps.forEach(a => {
+        const hidden = a.hidden;
+        const m = { name: a.name, icon: a.icon, color: a.color, iconColor: a.iconColor };
+        const badges =
+          (a.added ? '<span class="badge a">ADDED</span>' : (a.customized ? '<span class="badge c">CUSTOMIZED</span>' : ''))
+          + (a.featured ? '<span class="badge f">FEATURED</span>' : '')
+          + (a.isNew ? '<span class="badge n">NEW</span>' : '')
+          + (a.pinned ? '<span class="badge p">PINNED</span>' : '')
+          + (a.isTaggedExtra ? '<span class="badge" style="background:#3b3b4d; color:#bdbdda;">TAGGED</span>' : '')
+          + (hidden ? '<span class="badge h">HIDDEN</span>' : '');
+        html += `<div class="app-row" onclick="SM.openAppEditor('${a.key}')">
+          <div class="app-ico" style="background:${this.colorOf(m)};">${this.iconHTML({ ...m, name: a.name })}</div>
+          <div class="app-row-info">
+            <div class="app-row-name">${this.esc(a.name)}</div>
+            <div class="app-row-sub">${this.esc(a.subtitle)}</div>
+            <div class="badges">${badges}</div>
+          </div>
+          <button class="qbtn ${hidden ? 'on-h' : ''}" title="${hidden ? 'Unhide' : 'Hide'}" onclick="event.stopPropagation(); SM.quickToggleHidden('${a.key}')"><i class="fa-solid ${hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
+          <i class="fa-solid fa-chevron-right" style="color:var(--fg3); font-size:13px;"></i>
+        </div>`;
+      });
+    }
+
+    if (!subfolders.length && !allApps.length)
+      html += `<div class="empty" style="padding:20px;"><div class="e-sub">${q ? 'No matches in this folder.' : 'Empty folder.'}</div></div>`;
+    return html;
+  },
+
+  /* tag browse: breadcrumb + small edit/hide actions + bulk-add button + flat list of apps.
+     Matches the folder-browse layout so custom folders feel identical to repo folders. */
+  renderTagBrowse(id, q) {
+    const cat = this.data.categories.find(c => c.id === id);
+    const all = this.mergedApps().filter(m => m.tags.includes(id));
+    const apps = q ? all.filter(m => this.appMatches(m, q)) : all;
+    let html = `<div class="crumb-bar">`;
+    html += `<button class="crumb-btn" onclick="SM.catBrowseRoot()">📁 Folders</button><span class="crumb-sep">/</span><button class="crumb-btn cur">${this.esc(cat ? cat.name : id)}</button>`;
+    if (cat) {
+      const hidden = !!cat.hidden;
+      const dl = cat.download === true;
+      /* spacer pushes the action buttons to the right edge of the breadcrumb bar */
+      html += `<span style="flex:1;"></span>`;
+      if (dl) html += `<span class="badge a">DOWNLOADABLE</span>`;
+      html += `<button class="qbtn" title="Edit category" onclick="event.stopPropagation(); SM.openCatEditor('${this.esc(id)}')"><i class="fa-solid fa-pen" style="font-size:11px;"></i></button>`;
+      html += `<button class="qbtn ${hidden ? 'on-h' : ''}" title="${hidden ? 'Unhide' : 'Hide'}" onclick="event.stopPropagation(); SM.quickToggleCatHidden('${this.esc(id)}')"><i class="fa-solid ${hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>`;
+    }
+    html += `</div>`;
+
+    /* Bulk add button — same place & style as in folder browse */
+    html += `<button class="btn btn-s btn-sm" style="width:100%; margin-bottom:12px;" onclick="SM.openBulkAdd('tag','${this.esc(id)}')">
+      <i class="fa-solid fa-list-check"></i> Bulk add apps to this category
+    </button>`;
+
+    if (!apps.length) {
+      html += `<div class="empty" style="padding:20px;"><div class="e-sub">${q ? 'No apps match your search.' : (all.length === 0 ? 'No apps tagged here yet. Use the Bulk add button above.' : 'No apps.')}</div></div>`;
+      return html;
+    }
+    /* Sort: pinned first, then featured, then alphabetical — so a pinned
+       app always rises to the top of the category browse view. */
+    apps.sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+                     || ((b.featured ? 1 : 0) - (a.featured ? 1 : 0))
+                     || (a.name || '').localeCompare(b.name || ''));
+    apps.forEach(m => {
+      const ok = this.safeKey(m.key);
+      const path = m.catalog ? m.catalog.path : (m.entry ? (m.entry.url || (m.entry.repo + '/' + m.entry.path) || '') : '');
+      html += `<div class="app-row" onclick="SM.openAppEditor('${ok}')">
+        <div class="app-ico" style="background:${this.colorOf(m)};">${this.iconHTML(m)}</div>
+        <div class="app-row-info">
+          <div class="app-row-name">${this.esc(m.name)}</div>
+          <div class="app-row-sub">${this.esc(m.author || path)}</div>
+          <div class="badges">
+            ${m.added ? '<span class="badge a">ADDED</span>' : (m.entry ? '<span class="badge c">CUSTOMIZED</span>' : '')}
+            ${m.featured ? '<span class="badge f">FEATURED</span>' : ''}
+            ${m.isNew ? '<span class="badge n">NEW</span>' : ''}
+            ${m.pinned ? '<span class="badge p">PINNED</span>' : ''}
+            ${m.hidden ? '<span class="badge h">HIDDEN</span>' : ''}
+          </div>
+        </div>
+        <button class="qbtn ${m.hidden ? 'on-h' : ''}" title="${m.hidden ? 'Unhide' : 'Hide'}" onclick="event.stopPropagation(); SM.quickToggleHidden('${ok}')"><i class="fa-solid ${m.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
+      </div>`;
+    });
+    return html;
+  },
+
+  /* root view: custom categories (click=browse) + top-level repo folders */
+  renderRootCats(q, tree) {
+    let html = '';
+    /* Collect ALL folder slugs (top-level + nested, segment + full path)
+       so nested folder overrides don't appear as duplicate "custom"
+       categories in the root view. */
+    const allFolderSlugs = new Set();
+    if (tree) {
+      const walk = (nodes) => { nodes.forEach(n => {
+        allFolderSlugs.add(this.slugify(n.path.split('/').pop()));   /* segment slug (matches app tags) */
+        allFolderSlugs.add(this.slugify(n.path));                    /* full path slug (legacy) */
+        if (n.folders && n.folders.length) walk(n.folders);
+      }); };
+      walk(tree);
+    }
+    const customCats = tree
+      ? this.data.categories.filter(c => !allFolderSlugs.has(c.id))
+      : this.data.categories;
+    const filteredCustom = q ? customCats.filter(c => (c.name + ' ' + c.id).toLowerCase().includes(q)) : customCats;
+    filteredCustom.forEach(c => {
+      const n = this.mergedApps().filter(m => m.tags.includes(c.id)).length;
+      const hidden = !!c.hidden;
+      const dl = c.download === true;
+      html += `<div class="cat-row" onclick="SM.browseTag('${this.esc(c.id)}')">
+        <div class="cat-emoji">${this.folderIconHTML(c.icon)}</div>
+        <div class="cat-info"><div class="cat-name">${this.esc(c.name)} <span class="badge c">CUSTOM</span>${hidden ? ' <span class="badge h">HIDDEN</span>' : ''}${dl ? ' <span class="badge a">DOWNLOADABLE</span>' : ''}</div>
+        <div class="cat-sub" style="font-family:monospace;">${this.esc(c.id)} · ${n} app${n !== 1 ? 's' : ''} tagged</div></div>
+        <button class="qbtn" title="Edit" onclick="event.stopPropagation(); SM.openCatEditor('${this.esc(c.id)}')"><i class="fa-solid fa-pen" style="font-size:11px;"></i></button>
+        <button class="qbtn ${hidden ? 'on-h' : ''}" title="${hidden ? 'Unhide' : 'Hide'}" onclick="event.stopPropagation(); SM.quickToggleCatHidden('${this.esc(c.id)}')"><i class="fa-solid ${hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
+        <i class="fa-solid fa-chevron-right" style="color:var(--fg3); font-size:13px;"></i>
+      </div>`;
+    });
+
+    if (tree) {
+      const filteredTree = q ? tree.filter(node => {
+        const o = this.overrideForPath(node.path);
+        const nm = ((o && o.name) || node.name).toLowerCase();
+        return nm.includes(q) || this.folderHasMatch(node, q);
+      }) : tree;
+      filteredTree.forEach(node => {
+        const o = this.overrideForPath(node.path);
+        const n = this.catCountFiles(node);
+        const hidden = !!(o && o.hidden);
+        const dl = !!(o && o.download === true);
+        html += `<div class="cat-row" onclick="SM.catBrowse('${encodeURIComponent(node.path)}')">
+          <div class="cat-emoji">${this.folderIconHTML(o && o.icon)}</div>
+          <div class="cat-info"><div class="cat-name">${this.esc((o && o.name) || node.name)} <span class="repo-badge">REPO FOLDER</span>${hidden ? ' <span class="badge h">HIDDEN</span>' : ''}${dl ? ' <span class="badge a">DOWNLOADABLE</span>' : ''}</div>
+          <div class="cat-sub">${n} app${n !== 1 ? 's' : ''} · ${node.folders.length} subfolder${node.folders.length !== 1 ? 's' : ''}${o ? ' · customized' : ''}</div></div>
+          <button class="qbtn" title="Edit folder" onclick="event.stopPropagation(); SM.openFolderEditor('${encodeURIComponent(node.path)}')"><i class="fa-solid fa-pen" style="font-size:11px;"></i></button>
+          <button class="qbtn ${hidden ? 'on-h' : ''}" title="${hidden ? 'Unhide' : 'Hide'}" onclick="event.stopPropagation(); SM.quickToggleFolderHidden('${encodeURIComponent(node.path)}')"><i class="fa-solid ${hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
+          <i class="fa-solid fa-chevron-right" style="color:var(--fg3); font-size:13px;"></i>
+        </div>`;
+      });
+    }
+
+    if (!html) {
+      html = `<div class="empty"><div class="e-ico">📂</div><div class="e-title">${q ? 'No Matches' : 'No Categories'}</div><div class="e-sub">${q ? 'Try a different search.' : (tree ? 'No folders in this repo.' : 'Tap "Scan Repo Catalog" on the Home tab first, or add a custom category above.')}</div></div>`;
+    }
+    return html;
+  },
+  openCatEditor(id) {
+    this.catEditId = id;
+    this._editingFolderPath = null;
+    const custom = this.data.categories.find(c => c.id === id);
+    const folder = this.catalog.folderCats.find(c => c.id === id);
+    const isFolderOnly = !custom && folder;
+    $('catEditorTitle').textContent = isFolderOnly ? 'Override Folder Category' : 'Edit Category';
+    $('catEditName').value = custom ? custom.name : (folder ? folder.name : id);
+    this.setCatEditEmoji((custom && custom.icon) || '');
+    $('catEditId').value = id;
+    $('catEditNote').style.display = isFolderOnly ? 'block' : 'none';
+    if (isFolderOnly) $('catEditNote').textContent = 'This category comes from a repo folder. Saving creates an override (new name & icon) — the folder keeps feeding apps into it.';
+    $('catDeleteBtn').style.display = custom ? 'flex' : 'none';
+    /* move arrows + live position label (custom/override cats only) */
+    $('catMoveBtns').style.display = custom ? 'flex' : 'none';
+    /* download (default OFF) + hidden toggles apply to every custom category */
+    $('catDownloadRow').style.display = 'flex';
+    $('catDownloadSwitch').classList.toggle('on', custom ? custom.download === true : false);
+    $('catHiddenRow').style.display = 'flex';
+    $('catHiddenSwitch').classList.toggle('on', custom ? !!custom.hidden : false);
+    this.updateCatPosLabel();
+    $('catOv').classList.add('active');
+  },
+  /* Folder editor — name/icon override + download permission for any folder
+     (top-level or nested). Saving stores an override keyed by slug(fullPath). */
+  openFolderEditor(pathKey) {
+    const path = decodeURIComponent(pathKey);
+    this._editingFolderPath = path;
+    this.catEditId = null;
+    const node = this.findCatFolder(path);
+    if (!node) { toast('Folder not found — rescan the repo', 'err'); return; }
+    const o = this.overrideForPath(path);
+    $('catEditorTitle').textContent = 'Edit Folder';
+    $('catEditName').value = (o && o.name) || node.name;
+    this.setCatEditEmoji((o && o.icon) || '');
+    $('catEditId').value = this.slugify(path);
+    $('catEditNote').style.display = 'block';
+    $('catEditNote').textContent = 'Repo folder — saving stores an override (name, icon, download). Files inside are not changed.';
+    $('catDeleteBtn').style.display = o ? 'flex' : 'none';
+    $('catMoveBtns').style.display = 'none';
+    $('catPosLabel').style.display = 'none';
+    $('catDownloadRow').style.display = 'flex';
+    $('catDownloadSwitch').classList.toggle('on', (o && o.download) === true);  /* default OFF */
+    $('catHiddenRow').style.display = 'flex';
+    $('catHiddenSwitch').classList.toggle('on', !!(o && o.hidden));
+    $('catOv').classList.add('active');
+  },
+  closeCatEditor() { $('catOv').classList.remove('active'); this.catEditId = null; this._editingFolderPath = null; },
+  saveCatEdit() {
+    if (this._editingFolderPath) { this.saveFolderEdit(); return; }
+    const id = this.catEditId;
+    if (!id) return;
+    const name = $('catEditName').value.trim();
+    if (!name) { toast('Name required', 'err'); return; }
+    const dl = $('catDownloadSwitch').classList.contains('on');
+    const hd = $('catHiddenSwitch').classList.contains('on');
+    let c = this.data.categories.find(x => x.id === id);
+    if (c) { c.name = name; c.icon = this.getCatEditEmoji() || ''; c.download = dl; c.hidden = hd; }
+    else this.data.categories.push({ id, name, icon: this.getCatEditEmoji() || '', download: dl, hidden: hd });
+    this.persist(); this.renderCats(); this.renderDash(); this.renderAppList(); this.renderExportStats();
+    this.closeCatEditor(); toast('Category saved', 'ok');
+  },
+  saveFolderEdit() {
+    const path = this._editingFolderPath;
+    const node = this.findCatFolder(path);
+    if (!node) { toast('Folder not found — rescan the repo', 'err'); return; }
+    const name = $('catEditName').value.trim();
+    if (!name) { toast('Name required', 'err'); return; }
+    /* Full-path slug identity — same key overrideForPath() reads. Same-named
+       folders each get their own override, so renaming games/tools never
+       touches tools/ or apps/tools/. */
+    const id = this.slugify(path);
+    let entry = this.data.categories.find(c => c.id === id);
+    if (!entry) { entry = { id, name: node.name, icon: '📁' }; this.data.categories.push(entry); }
+    entry.name = name;
+    entry.icon = this.getCatEditEmoji() || '';
+    entry.download = $('catDownloadSwitch').classList.contains('on');
+    entry.hidden = $('catHiddenSwitch').classList.contains('on');
+    this.persist(); this.renderCats(); this.renderDash(); this.renderAppList(); this.renderExportStats();
+    this.closeCatEditor(); toast('Folder saved', 'ok');
+  },
+  updateCatPosLabel() {
+    const i = this.data.categories.findIndex(c => c.id === this.catEditId);
+    if (i < 0) { $('catPosLabel').style.display = 'none'; return; }
+    const el = $('catPosLabel');
+    el.style.display = 'block';
+    el.textContent = `↕ Position ${i + 1} of ${this.data.categories.length} in your list`;
+    el.style.color = 'var(--accent)';
+    setTimeout(() => { el.style.color = 'var(--fg2)'; }, 350);
+  },
+  moveCat(dir) {
+    const i = this.data.categories.findIndex(c => c.id === this.catEditId);
+    if (i < 0) return;
+    const j = i + dir;
+    if (j < 0 || j >= this.data.categories.length) return;
+    const cats = this.data.categories;
+    [cats[i], cats[j]] = [cats[j], cats[i]];
+    this.persist(); this.renderCats();
+    const c = cats[j];
+    $('catEditName').value = c.name; this.setCatEditEmoji(c.icon || '');
+    this.updateCatPosLabel();
+  },
+  deleteCat() {
+    if (this._editingFolderPath) {
+      const path = this._editingFolderPath;
+      /* full-path slug first; segment slug fallback cleans up legacy entries */
+      const full = this.slugify(path);
+      const seg = this.slugify(path.split('/').pop());
+      const e = this.data.categories.find(c => c.id === full) || (seg !== full ? this.data.categories.find(c => c.id === seg) : null);
+      if (!e) { toast('Nothing to reset — this folder is default', 'info'); return; }
+      if (!confirm(`Remove the customization for "${e.name}"?\nThe folder keeps its default name & icon (apps stay).`)) return;
+      this.data.categories = this.data.categories.filter(c => c.id !== e.id);
+      this.persist(); this.renderAll(); this.closeCatEditor();
+      toast('Folder reset to default', 'ok');
+      return;
+    }
+    const id = this.catEditId;
+    const c = this.data.categories.find(x => x.id === id);
+    if (!c) return;
+    const isOverride = this.catalog.folderCats.some(f => f.id === id);
+    const n = this.data.apps.filter(e => e.tags.includes(id)).length;
+    let msg = `Delete "${c.name}"?`;
+    if (isOverride) msg += `\n\nIt overrides a repo folder — deleting restores the folder's default name & icon (apps stay).`;
+    if (n) msg += `\n\n${n} entry(ies) are tagged with it — they keep the tag but it becomes a plain folder tag.`;
+    if (!confirm(msg)) return;
+    this.data.categories = this.data.categories.filter(x => x.id !== id);
+    this.persist(); this.renderAll();
+    this.closeCatEditor(); toast(isOverride ? 'Override removed — folder default restored' : 'Category deleted', 'ok');
+  },
+
+  /* ---------- helpers ---------- */
+  esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
+  iconHTML(app) {
+    const ic = app.icon || '';
+    if (ic === 'blank') return '';
+    if (ic.startsWith('fa:')) {
+      const icColor = (app.iconColor && app.iconColor.trim()) ? app.iconColor : 'var(--accent)';
+      return `<i class="fa-solid ${this.esc(ic.slice(3))}" style="color:${icColor};"></i>`;
+    }
+    if (ic.trim() !== '') return this.esc(ic);
+    return this.esc(this.getIcon(app.name || 'app'));  /* default = auto emoji, same as the store */
+  },
+  /* Folder icon renderer — same idea as iconHTML but folders default to 📁
+     (not auto-icon-by-name) and don't take a color. Supports emojis, plain
+     text, and FontAwesome symbols via the 'fa:' prefix. */
+  folderIconHTML(icon) {
+    const ic = icon || '';
+    if (ic === 'blank') return '';
+    if (ic.startsWith('fa:')) return `<i class="fa-solid ${this.esc(ic.slice(3))}" style="color:var(--accent);"></i>`;
+    if (ic.trim() !== '') return this.esc(ic);
+    return '📁';
+  },
+  /* Read/write the catEditEmoji tile as a value (so FA icons render) */
+  setCatEditEmoji(icon) {
+    const v = icon || '';
+    const el = $('catEditEmoji');
+    el.dataset.icon = v;
+    el.innerHTML = this.folderIconHTML(v);
+  },
+  getCatEditEmoji() { return $('catEditEmoji').dataset.icon || ''; },
+  /* Same helper for the new-category tile on the Categories tab */
+  setNewCatEmoji(icon) {
+    const v = icon || '';
+    const el = $('newCatEmoji');
+    el.dataset.icon = v;
+    el.innerHTML = this.folderIconHTML(v);
+  },
+  getNewCatEmoji() { return $('newCatEmoji').dataset.icon || ''; },
+  colorOf(app) { return app.color || 'linear-gradient(135deg, #2a2a32, #3a3a44)'; },
+};
+
+const $ = id => document.getElementById(id);
+function toast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  const ico = { ok: 'fa-circle-check', err: 'fa-circle-xmark', info: 'fa-circle-info' };
+  t.innerHTML = `<i class="fa-solid ${ico[type] || ico.info}"></i> ${SM.esc(msg)}`;
+  $('toasts').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 320); }, 2600);
+}
+
+
+/* ==================================================================
+   Part 2: icon/color pickers, export, GitHub load, bulk add.
+==================================================================== */
+Object.assign(SM, {
+
+  /* ---------- ICON PICKER ---------- */
+  FA_ICONS: ['fa-rocket','fa-star','fa-gamepad','fa-code','fa-ghost','fa-fire','fa-heart','fa-bolt','fa-cube','fa-moon','fa-sun','fa-cloud','fa-globe','fa-compass','fa-map','fa-paper-plane','fa-plane','fa-car','fa-truck','fa-ship','fa-anchor','fa-bicycle','fa-bus','fa-train','fa-helicopter','fa-robot','fa-brain','fa-microchip','fa-database','fa-server','fa-terminal','fa-keyboard','fa-mobile-screen','fa-laptop','fa-desktop','fa-camera','fa-image','fa-video','fa-music','fa-headphones','fa-microphone','fa-volume-high','fa-radio','fa-tv','fa-clapperboard','fa-film','fa-palette','fa-brush','fa-pen','fa-pen-nib','fa-book','fa-book-open','fa-newspaper','fa-scroll','fa-graduation-cap','fa-calculator','fa-flask','fa-atom','fa-dna','fa-microscope','fa-satellite','fa-magnet','fa-zap','fa-battery-full','fa-plug','fa-lightbulb','fa-cubes','fa-puzzle-piece','fa-chess','fa-chess-knight','fa-dice','fa-trophy','fa-medal','fa-crown','fa-gem','fa-diamond','fa-coins','fa-sack-dollar','fa-wallet','fa-chart-line','fa-chart-pie','fa-chart-bar','fa-trending-up','fa-tags','fa-cart-shopping','fa-bag-shopping','fa-store','fa-shop','fa-gift','fa-box','fa-box-open','fa-warehouse','fa-truck-fast','fa-utensils','fa-pizza-slice','fa-burger','fa-mug-hot','fa-beer-mug-empty','fa-wine-glass','fa-cake-candles','fa-ice-cream','fa-cookie','fa-apple-whole','fa-carrot','fa-seedling','fa-leaf','fa-tree','fa-mountain','fa-water','fa-umbrella-beach','fa-snowflake','fa-cloud-sun','fa-cloud-rain','fa-cloud-bolt','fa-house','fa-building','fa-city','fa-tower-broadcast','fa-tower-cell','fa-archway','fa-tent','fa-campground','fa-bed','fa-couch','fa-shirt','fa-shoe-prints','fa-glasses','fa-bell','fa-clock','fa-hourglass','fa-calendar','fa-note-sticky','fa-clipboard','fa-folder','fa-folder-open','fa-envelope','fa-inbox','fa-comment','fa-comments','fa-message','fa-phone','fa-signal','fa-wifi','fa-link','fa-share-nodes','fa-download','fa-upload','fa-cloud-arrow-down','fa-cloud-arrow-up','fa-floppy-disk','fa-hard-drive','fa-lock','fa-lock-open','fa-key','fa-shield','fa-shield-halved','fa-user-secret','fa-user','fa-users','fa-user-astronaut','fa-user-ninja','fa-user-graduate','fa-user-gear','fa-handshake','fa-thumbs-up','fa-hand-peace','fa-heart-crack','fa-face-smile','fa-face-grin-stars','fa-face-angry','fa-face-dizzy','fa-face-laugh','fa-skull','fa-spider','fa-bug','fa-worm','fa-dragon','fa-hippo','fa-otter','fa-dog','fa-cat','fa-horse','fa-fish','fa-frog','fa-shrimp','fa-kiwi-bird','fa-feather','fa-paw','fa-baseball','fa-basketball','fa-futbol','fa-volleyball','fa-bowling-ball','fa-dumbbell','fa-person-running','fa-person-swimming','fa-person-biking','fa-person-skiing','fa-person-skating','fa-bullseye','fa-crosshairs','fa-bomb','fa-fire-flame-curved','fa-explosion','fa-jet-fighter','fa-shuttle-space','fa-satellite-dish','fa-meteor','fa-wand-magic-sparkles','fa-hat-wizard','fa-yin-yang','fa-recycle','fa-battery-half','fa-gauge-high','fa-screwdriver-wrench','fa-wrench','fa-hammer','fa-toolbox','fa-briefcase','fa-scale-balanced','fa-gavel','fa-building-columns','fa-landmark','fa-flag','fa-flag-checkered','fa-earth-africa','fa-earth-america','fa-earth-asia','fa-location-dot','fa-map-location','fa-route','fa-signs-post','fa-money-bill','fa-bitcoin-sign','fa-dollar-sign','fa-euro-sign','fa-pound-sign','fa-yen-sign','fa-credit-card','fa-receipt','fa-piggy-bank','fa-hand-holding-dollar','fa-money-bill-trend-up','fa-chart-simple','fa-list-check','fa-clipboard-check','fa-square-check','fa-circle-check','fa-check-double','fa-xmark','fa-circle-xmark','fa-ban','fa-circle-info','fa-circle-question','fa-circle-plus','fa-plus','fa-minus','fa-arrow-up','fa-arrow-down','fa-arrow-left','fa-arrow-right','fa-arrows-rotate','fa-rotate','fa-reply','fa-forward','fa-play','fa-pause','fa-stop','fa-forward-step','fa-shuffle','fa-repeat','fa-guitar','fa-drum','fa-compact-disc','fa-record-vinyl','fa-podcast','fa-camera-retro','fa-camera-rotate','fa-photo-film','fa-paintbrush','fa-stamp','fa-icons','fa-wand-magic','fa-scissors','fa-car-on','fa-road','fa-traffic-light','fa-gas-pump','fa-charging-station','fa-solar-panel','fa-industry','fa-fire-burner','fa-bath','fa-shower','fa-soap','fa-broom','fa-trash-can','fa-bucket','fa-spray-can-sparkles','fa-snowplow','fa-tractor'],
+  EMOJIS: ['🚀','⭐','🎮','🕹️','🎲','🧩','🎯','🏆','🥇','💻','🖥️','⌨️','🖱️','📱','📲','🔧','🛠️','⚙️','🔩','🧲','🔋','🔌','💡','🌐','🌍','🔎','🔍','📁','📂','🗂️','📄','📝','✏️','🖊️','📚','📖','🔖','📌','📎','🗓️','📅','⏰','⏳','⌛','⏱️','🧮','🧠','🤖','👽','🛸','🪐','🌌','🔭','🧪','⚗️','🔬','🧬','🦠','💊','🩺','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💖','💕','🎵','🎶','🎤','🎧','🎸','🥁','🎹','🎺','🎻','🎬','🎥','📷','📸','🎨','🖌️','🖼️','🎭','🎪','🎉','🎊','🎁','🎈','🚗','🚕','🚌','🚎','🏎️','🚓','🚑','🚒','🚚','🚛','🛴','🚲','🛵','✈️','🚁','🛶','⛵','🚢','🗺️','🧭','🏔️','⛰️','🌋','🏝️','🏖️','🌊','💧','🔥','❄️','⛄','🌈','☀️','🌤️','☁️','🌧️','⛈️','🌪️','🌙','🌚','🌟','✨','⚡','☄️','💣','🧨','🗡️','⚔️','🛡️','🏹','🥊','🥋','🎿','🏂','🏄','🚣','🏊','🏃','🧗','🚵','🤸','⛹️','🏋️','🏌️','🏇','🧘','🐈','🐕','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🕷️','🦂','🐢','🐍','🦎','🐙','🦑','🦐','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🐘','🦛','🐪','🐫','🦒','🦘','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐩','🐓','🦃','🦚','🦜','🦢','🕊️','🐇','🦔','🐾','🐉','🐲','🌵','🎄','🌲','🌳','🌴','🌱','🌿','☘️','🍀','🎍','🎋','🍃','🍂','🍁','🍄','🐚','🪨','🌾','💐','🌷','🌹','🥀','🌺','🌸','🌼','🌻','🌞','🌝','🌛','🌜','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌎','🌏','💫','💥','💦','☔','☂️','🛒','🛍️','🎀','🪄','🧸','🪁','🎱','🎣','🤿','👕','👖','🧥','🧦','🧤','🧣','🎩','🧢','👑','💍','💎','⚖️','🪜','🧰','🪛','🔨','⛏️','🪚','🔒','🔓','🗝️','🔑','🚪','🪑','🛏️','🛋️','🚿','🛁','🧼','🪥','🧽','🧹','🧺','🧻','🪣','🧴','🛎️','🚨','🚧','⛽','🛢️','🚏','🗿','🗽','🗼','🏰','🏯','🏟️','🎡','🎢','🎠','⛲','⛱️','🏜️','🗻','🏕️','⛺','🏠','🏡','🏘️','🏗️','🏭','🏢','🏬','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🖨️','💾','💿','📀','📽️','📹','📼','🕯️','🔦','🏮','🪔','📔','📕','📗','📘','📙','📓','📒','📃','📜','📰','🗞️','📑','🏷️','💰','🪙','💸','💳','🧾','💹','📊','📈','📉','🗒️','📆','📇','🗃️','🗳️','🗄️','📋','🕒','🕓','🕐','🕑','🕔','🕗','🕧','🙃','🙂','😀','😃','😄','😁','😆','😅','🤣','😂','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👾','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊','👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦵','🦶','👂','👃','🫀','🦷','👀','👁️','👅','👄','💋','🩸'],
+
+  /* ---------- ICON PICKER (WebOS-matching) ---------- */
+  ICON_EMOJIS: ['📱','🎯','🔧','📝','🎨','🎵','📷','🗂️','📊','🧩','💡','🛠️','📐','🖥️','🌐','⚡','🔒','📦','🎲','🧮','📚','✏️','🔬','🧪','💻','🤖','🕹️','🎭','🎪','🏗️'],
+  hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0; return Math.abs(h); },
+  getIcon(n) { return this.ICON_EMOJIS[this.hashStr(n) % this.ICON_EMOJIS.length]; },
+  iconNameOf(fa) { return fa.replace(/^fa-/, ''); },
+  iconSelectionFaceHTML(val, name) {
+    if (val === 'blank') return '';
+    if (val.startsWith('fa:')) {
+      const icColor = (this.editIconColor && this.editIconColor.trim()) ? this.editIconColor : 'var(--accent)';
+      return `<i class="fa-solid ${this.esc(val.slice(3))}" style="font-size:24px;color:${icColor};"></i>`;
+    }
+    if (val.trim() !== '') return `<span style="font-size:26px;">${this.esc(val)}</span>`;
+    return `<span style="font-size:24px;">${this.esc(this.getIcon(name || 'app'))}</span>`;  /* default = auto icon */
+  },
+  iconSelectionDesc(val) {
+    if (val === 'blank') return 'Blank — background only';
+    if (val === '' ) return 'Default — auto icon';
+    if (val.startsWith('fa:')) return 'Symbol: ' + this.iconNameOf(val.slice(3)).replace(/-/g, ' ');
+    return 'Emoji/text';
+  },
+  updateIconPreviewBar() {
+    const name = $('edName').value || 'App';
+    $('ipName').textContent = name;
+    const bg = (this.editColor && this.editColor.trim() !== '') ? this.editColor : 'var(--bg3)';
+    $('ipPreviewIcon').style.background = bg;
+    $('ipPreviewIcon').innerHTML = this.iconSelectionFaceHTML(this.editIcon, name);
+    $('ipSub').textContent = this.iconSelectionDesc(this.editIcon);
+  },
+  /* ---------- SYMBOL COLOR BUTTON VISIBILITY ----------
+     The palette button lives in the icon picker sheet (next to its Save
+     button). It only appears when the current editIcon is a FontAwesome
+     symbol (fa:...). Hides for emoji/blank/auto. */
+  updateSymbolColorBtn() {
+    const show = !!(this.editIcon && this.editIcon.startsWith('fa:'));
+    const btn = $('edSymbolColorBtn');
+    if (btn) btn.style.display = show ? '' : 'none';
+  },
+  openIconColorPicker() {
+    /* Only meaningful for symbols — but if user opens it without one,
+       we still let them (they just won't see a live preview glyph). */
+    this.setupIconColorUI();
+    this.updateIconColorPreviewBar();
+    $('iconColorOv').classList.add('active');
+  },
+  closeIconColorPicker() { $('iconColorOv').classList.remove('active'); },
+  /* Live preview bar inside the Symbol Color sheet */
+  updateIconColorPreviewBar() {
+    const name = $('edName').value || 'App';
+    if ($('icName')) $('icName').textContent = name;
+    if ($('icPreviewIcon')) {
+      const bg = (this.editColor && this.editColor.trim() !== '') ? this.editColor : 'var(--bg3)';
+      $('icPreviewIcon').style.background = bg;
+      $('icPreviewIcon').innerHTML = this.iconSelectionFaceHTML(this.editIcon, name);
+    }
+    if ($('icSub')) {
+      const sysOn = !this.editIconColor || !this.editIconColor.trim();
+      $('icSub').textContent = sysOn ? 'System color' : ('Custom: ' + this.editIconColor);
+    }
+  },
+  closeIconPicker() { $('iconOv').classList.remove('active'); },
+  openIconPicker() {
+    $('iconSearch').value = '';
+    $('iconCustomText').value = (this.editIcon && !this.editIcon.startsWith('fa:') && this.editIcon !== 'blank') ? this.editIcon : '';
+    this.updateIconPreviewBar();
+    this.updateSymbolColorBtn();
+    this.renderIconGrids('');
+    $('iconOv').classList.add('active');
+  },
+  /* ---------- icon color (system vs custom) ----------
+     editIconColor === ''      → use system accent (default; toggle ON, custom row hidden)
+     editIconColor === '#xxx'  → custom solid color (toggle OFF, custom row shown) */
+  ICON_COLOR_PRESETS: [
+    { label: 'White',  value: '#ffffff' },
+    { label: 'Black',  value: '#0a0a0f' },
+    { label: 'Crimson',value: '#e11d48' },
+    { label: 'Sunset', value: '#f97316' },
+    { label: 'Amber', value: '#e8a83e' },
+    { label: 'Lime',   value: '#84cc16' },
+    { label: 'Forest', value: '#16a34a' },
+    { label: 'Teal',   value: '#0d9488' },
+    { label: 'Ocean',  value: '#2563eb' },
+    { label: 'Indigo', value: '#4f46e5' },
+    { label: 'Violet', value: '#7c3aed' },
+    { label: 'Pink',   value: '#db2777' },
+  ],
+  setupIconColorUI() {
+    /* Toggle reflects: ON = system color (no entry.iconColor), OFF = custom */
+    const sysOn = !this.editIconColor || !this.editIconColor.trim();
+    $('iconColorSystemToggle').classList.toggle('on', sysOn);
+    $('iconColorCustomRow').style.display = sysOn ? 'none' : 'block';
+    /* Render swatches */
+    const grid = $('iconColorSwatchGrid');
+    grid.innerHTML = '';
+    const cur = this.editIconColor || '';
+    this.ICON_COLOR_PRESETS.forEach(o => {
+      const sw = document.createElement('div');
+      sw.className = 'color-swatch' + (cur.toLowerCase() === o.value.toLowerCase() ? ' selected' : '');
+      sw.style.background = o.value;
+      sw.innerHTML = `<span class="swatch-tag">${o.label}</span>`;
+      sw.onclick = () => this.selectIconColor(o.value);
+      grid.appendChild(sw);
+    });
+    /* Reflect current value in the text input */
+    $('iconColorInput').value = cur;
+  },
+  toggleIconColorSystem(btn) {
+    const turnOn = !btn.classList.contains('on');
+    btn.classList.toggle('on', turnOn);
+    $('iconColorCustomRow').style.display = turnOn ? 'none' : 'block';
+    if (turnOn) {
+      this.editIconColor = '';
+    } else {
+      /* Seed a sensible default if empty so the picker shows a live color */
+      const cur = ($('iconColorInput').value || '').trim();
+      this.editIconColor = cur || '#e8a83e';
+      $('iconColorInput').value = this.editIconColor;
+    }
+    this.updateIconPreviewBar();
+    this.updateIconColorPreviewBar();
+    this.renderIconGrids($('iconSearch').value);
+  },
+  selectIconColor(value) {
+    this.editIconColor = value;
+    /* Selecting a swatch implies custom — flip the system toggle off */
+    $('iconColorSystemToggle').classList.remove('on');
+    $('iconColorCustomRow').style.display = 'block';
+    $('iconColorInput').value = value;
+    /* Mark selected swatch */
+    document.querySelectorAll('#iconColorSwatchGrid .color-swatch').forEach(sw => {
+      sw.classList.toggle('selected', sw.style.background && sw.style.background.toLowerCase().includes(value.toLowerCase()));
+    });
+    this.updateIconPreviewBar();
+    this.updateIconColorPreviewBar();
+    this.updateEditorPreview();
+    this.renderIconGrids($('iconSearch').value);
+  },
+  updateIconColorPreview(value) {
+    const v = (value || '').trim();
+    this.editIconColor = v;
+    this.updateIconPreviewBar();
+    this.updateIconColorPreviewBar();
+    this.updateEditorPreview();
+    this.renderIconGrids($('iconSearch').value);
+  },
+  renderIconGrids(query) {
+    const q = (query || '').trim().toLowerCase();
+    const grid = $('iconGridSymbols');
+    grid.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    const mk = sel => { const d = document.createElement('div'); d.className = 'icon-opt' + (sel ? ' selected' : ''); return d; };
+
+    /* Default (auto) */
+    const dbtn = mk(this.editIcon === '');
+    dbtn.title = 'Default — auto icon';
+    dbtn.innerHTML = '<span style="font-weight:700;font-size:15px;color:var(--fg2);">Aa</span>';
+    dbtn.onclick = () => this.selectIcon('');
+    frag.appendChild(dbtn);
+
+    /* Blank */
+    const bbtn = mk(this.editIcon === 'blank');
+    bbtn.title = 'Blank — background only';
+    bbtn.innerHTML = '<i class="fa-solid fa-ban" style="font-size:13px;opacity:.5;"></i>';
+    bbtn.onclick = () => this.selectIcon('blank');
+    frag.appendChild(bbtn);
+
+    /* Symbols (accent-colored, same as WebOS) */
+    const matches = q ? this.FA_ICONS.filter(fa => this.iconNameOf(fa).includes(q)) : this.FA_ICONS;
+    if (q && !matches.length) {
+      const none = document.createElement('div');
+      none.style.cssText = 'grid-column:1/-1;font-size:12px;color:var(--fg3);text-align:center;padding:8px 0;';
+      none.textContent = 'No symbols match your search';
+      frag.appendChild(none);
+    } else {
+      matches.forEach(fa => {
+        const b = mk('fa:' + fa === this.editIcon);
+        b.title = this.iconNameOf(fa);
+        b.innerHTML = `<i class="fa-solid ${fa}"></i>`;
+        b.onclick = () => this.selectIcon('fa:' + fa);
+        frag.appendChild(b);
+      });
+    }
+    grid.appendChild(frag);
+  },
+  selectIcon(val) {
+    this.editIcon = val;
+    if (val === '' || val === 'blank' || val.startsWith('fa:')) $('iconCustomText').value = '';
+    this.updateIconPreviewBar();
+    this.updateIconColorPreviewBar();
+    this.updateSymbolColorBtn();
+    this.updateEditorPreview();
+    this.renderIconGrids($('iconSearch').value);
+  },
+  onIconCustomInput() {
+    this.editIcon = $('iconCustomText').value.trim();
+    this.updateIconPreviewBar();
+    this.updateIconColorPreviewBar();
+    this.updateSymbolColorBtn();
+    this.updateEditorPreview();
+    this.renderIconGrids($('iconSearch').value);
+  },
+  clearIconCustom() {
+    $('iconCustomText').value = '';
+    this.selectIcon('');
+  },
+  saveIconPicker() {
+    this.updateEditorPreview();
+    this.updateSymbolColorBtn();
+    this.closeIconPicker();
+  },
+
+  /* ---------- FOLDER ICON PICKER (mirrors WebOS icon page) ---------- */
+  /* Targets: 'new' = new-category tile, 'edit' = open folder/category editor tile */
+  _catEmojiTarget: null,
+  _catEmojiEditIcon: '',   /* current icon value being edited in the picker */
+  openCatEmojiPicker(target) {
+    this._catEmojiTarget = target;
+    /* Load the current icon value from the target tile's dataset */
+    if (target === 'new') this._catEmojiEditIcon = this.getNewCatEmoji() || '';
+    else if (target === 'edit') this._catEmojiEditIcon = this.getCatEditEmoji() || '';
+    else this._catEmojiEditIcon = '';
+    /* If current is a FA icon or blank, leave the text input empty; otherwise show the emoji */
+    $('catEmojiText').value = (this._catEmojiEditIcon && !this._catEmojiEditIcon.startsWith('fa:') && this._catEmojiEditIcon !== 'blank') ? this._catEmojiEditIcon : '';
+    if ($('catEmojiSearch')) $('catEmojiSearch').value = '';
+    this.updateCatEmojiPreviewBar();
+    this.renderCatEmojiGrids('');
+    $('catEmojiOv').classList.add('active');
+  },
+  closeCatEmojiPicker() { $('catEmojiOv').classList.remove('active'); },
+  updateCatEmojiPreviewBar() {
+    const target = this._catEmojiTarget;
+    let name = 'Folder';
+    if (target === 'new') name = $('newCatName').value || 'New Category';
+    else if (target === 'edit') name = $('catEditName').value || 'Folder';
+    if ($('catIpName')) $('catIpName').textContent = name;
+    if ($('catIpPreviewIcon')) {
+      $('catIpPreviewIcon').style.background = 'var(--bg3)';
+      $('catIpPreviewIcon').innerHTML = this.folderIconHTML(this._catEmojiEditIcon);
+    }
+    if ($('catIpSub')) $('catIpSub').textContent = this.catIconSelectionDesc(this._catEmojiEditIcon);
+  },
+  catIconSelectionDesc(val) {
+    if (val === 'blank') return 'Blank — no icon';
+    if (val === '' ) return 'Default — 📁';
+    if (val.startsWith('fa:')) return 'Symbol: ' + this.iconNameOf(val.slice(3)).replace(/-/g, ' ');
+    return 'Emoji/text';
+  },
+  renderCatEmojiGrids(query) {
+    const q = (query || '').trim().toLowerCase();
+    const grid = $('catEmojiGrid');
+    grid.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    const mk = sel => { const d = document.createElement('div'); d.className = 'icon-opt' + (sel ? ' selected' : ''); return d; };
+
+    /* Default 📁 */
+    const dbtn = mk(this._catEmojiEditIcon === '' || this._catEmojiEditIcon === '📁');
+    dbtn.title = 'Default folder icon';
+    dbtn.innerHTML = '<span style="font-size:20px;">📁</span>';
+    dbtn.onclick = () => this.selectCatEmoji('');
+    frag.appendChild(dbtn);
+
+    /* Blank */
+    const bbtn = mk(this._catEmojiEditIcon === 'blank');
+    bbtn.title = 'Blank — no icon';
+    bbtn.innerHTML = '<i class="fa-solid fa-ban" style="font-size:13px;opacity:.5;"></i>';
+    bbtn.onclick = () => this.selectCatEmoji('blank');
+    frag.appendChild(bbtn);
+
+    /* Symbols (accent-colored, same as WebOS) */
+    const matches = q ? this.FA_ICONS.filter(fa => this.iconNameOf(fa).includes(q)) : this.FA_ICONS;
+    if (q && !matches.length) {
+      const none = document.createElement('div');
+      none.style.cssText = 'grid-column:1/-1;font-size:12px;color:var(--fg3);text-align:center;padding:8px 0;';
+      none.textContent = 'No symbols match your search';
+      frag.appendChild(none);
+    } else {
+      matches.forEach(fa => {
+        const b = mk('fa:' + fa === this._catEmojiEditIcon);
+        b.title = this.iconNameOf(fa);
+        b.innerHTML = `<i class="fa-solid ${fa}"></i>`;
+        b.onclick = () => this.selectCatEmoji('fa:' + fa);
+        frag.appendChild(b);
+      });
+    }
+    grid.appendChild(frag);
+  },
+  selectCatEmoji(val) {
+    this._catEmojiEditIcon = val;
+    if (val === '' || val === 'blank' || val.startsWith('fa:')) $('catEmojiText').value = '';
+    this.updateCatEmojiPreviewBar();
+    this.renderCatEmojiGrids($('catEmojiSearch') ? $('catEmojiSearch').value : '');
+  },
+  onCatEmojiText(v) {
+    this._catEmojiEditIcon = (v || '').trim();
+    this.updateCatEmojiPreviewBar();
+    this.renderCatEmojiGrids($('catEmojiSearch') ? $('catEmojiSearch').value : '');
+  },
+  clearCatEmojiCustom() {
+    $('catEmojiText').value = '';
+    this.selectCatEmoji('');
+  },
+  saveCatEmojiPicker() {
+    const val = this._catEmojiEditIcon;
+    const target = this._catEmojiTarget;
+    /* For folders: '' means use default 📁 (we store '' so the renderer
+       falls back to 📁 automatically via folderIconHTML). 'blank' is
+       stored as 'blank' so the renderer shows nothing. */
+    if (target === 'new') this.setNewCatEmoji(val);
+    else if (target === 'edit') this.setCatEditEmoji(val);
+    this.closeCatEmojiPicker();
+  },
+
+  /* ---------- BULK ADD APPS TO CATEGORY ---------- */
+  /* Target: {kind:'tag', id} for custom categories, {kind:'folder', path} for
+     folder overrides (the folder's FULL-PATH slug becomes the tag ID, so
+     bulk-added apps land in exactly this folder — even among same-named ones). */
+  _bulkAddTarget: null,
+  _bulkAddSelected: new Set(),
+  openBulkAdd(kind, key) {
+    let id = null, title = 'Add Apps to Category';
+    if (kind === 'tag') {
+      id = decodeURIComponent(key);
+      const cat = this.data.categories.find(c => c.id === id) || this.mergedCats().find(c => c.id === id);
+      title = 'Add Apps to "' + (cat ? cat.name : id) + '"';
+    } else if (kind === 'folder') {
+      const path = decodeURIComponent(key);
+      id = this.slugify(path);
+      const node = this.findCatFolder(path);
+      const o = this.overrideForPath(path);
+      title = 'Add Apps to "' + ((o && o.name) || (node ? node.name : id)) + '"';
+    }
+    this._bulkAddTarget = { kind, id };
+    this._bulkAddSelected = new Set();
+    $('bulkAddTitle').textContent = title;
+    $('bulkAddSearch').value = '';
+    this.renderBulkAddList();
+    $('bulkAddOv').classList.add('active');
+  },
+  closeBulkAdd() { $('bulkAddOv').classList.remove('active'); this._bulkAddTarget = null; },
+  renderBulkAddList() {
+    const id = this._bulkAddTarget ? this._bulkAddTarget.id : null;
+    if (!id) { $('bulkAddList').innerHTML = ''; return; }
+    const q = ($('bulkAddSearch').value || '').toLowerCase().trim();
+    let all = this.mergedApps().filter(m => !m.hidden);
+    if (q) all = all.filter(m => this.appMatches(m, q));
+    /* sort: apps already tagged sink to bottom; rest alpha */
+    all.sort((a, b) => {
+      const at = a.tags.includes(id) ? 1 : 0, bt = b.tags.includes(id) ? 1 : 0;
+      if (at !== bt) return at - bt;
+      return a.name.localeCompare(b.name);
+    });
+    $('bulkAddList').innerHTML = all.length ? all.map(m => {
+      const ok = this.safeKey(m.key);
+      const sel = this._bulkAddSelected.has(m.key);
+      const alreadyTagged = m.tags.includes(id);
+      const path = m.catalog ? m.catalog.path : (m.entry ? (m.entry.url || (m.entry.repo + '/' + m.entry.path) || '') : '');
+      return `<div class="app-row" onclick="SM.toggleBulkAdd('${ok}')">
+        <div class="app-ico" style="background:${this.colorOf(m)};">${this.iconHTML(m)}</div>
+        <div class="app-row-info">
+          <div class="app-row-name">${this.esc(m.name)}</div>
+          <div class="app-row-sub">${this.esc(m.author || path)}</div>
+          <div class="badges">${alreadyTagged ? '<span class="badge c">ALREADY IN</span>' : ''}${sel && !alreadyTagged ? '<span class="badge a">SELECTED</span>' : ''}</div>
+        </div>
+        <button class="qbtn ${sel && !alreadyTagged ? 'on-f' : ''} ${alreadyTagged ? 'off' : ''}" title="${alreadyTagged ? 'Already in category' : (sel ? 'Remove' : 'Add')}"><i class="fa-solid ${alreadyTagged ? 'fa-check' : (sel ? 'fa-check' : 'fa-plus')}"></i></button>
+      </div>`;
+    }).join('') : `<div class="empty"><div class="e-ico">📦</div><div class="e-title">No Apps</div><div class="e-sub">${q ? 'Nothing matches your search.' : 'No apps available.'}</div></div>`;
+  },
+  toggleBulkAdd(key) {
+    key = this.decodeKey(key);
+    const id = this._bulkAddTarget ? this._bulkAddTarget.id : null;
+    if (!id) return;
+    /* Don't toggle already-tagged apps */
+    const m = this.mergedApps().find(x => x.key === key);
+    if (m && m.tags.includes(id)) return;
+    if (this._bulkAddSelected.has(key)) this._bulkAddSelected.delete(key);
+    else this._bulkAddSelected.add(key);
+    this.renderBulkAddList();
+  },
+  saveBulkAdd() {
+    const id = this._bulkAddTarget ? this._bulkAddTarget.id : null;
+    if (!id) { this.closeBulkAdd(); return; }
+    let added = 0;
+    this._bulkAddSelected.forEach(key => {
+      const m = this.mergedApps().find(x => x.key === key);
+      if (!m) return;
+      let e = m.entry;
+      if (!e) {
+        if (!m.catalog) return;
+        e = this.newEntryForCatalog(m.catalog);
+        this.data.apps.push(e);
+      }
+      if (!e.tags.includes(id)) { e.tags.push(id); added++; }
+    });
+    this.persist();
+    this.renderAll();
+    this.closeBulkAdd();
+    toast(added ? `Added ${added} app${added !== 1 ? 's' : ''} to category` : 'No new apps added (already tagged)', added ? 'ok' : 'info');
+  },
+
+  /* ---------- MASS EDIT APPS ---------- */
+  /* Select any number of apps, then apply only the checked fields to all of
+     them at once. Entries are created lazily and only when a value actually
+     changes, so a no-op mass edit doesn't stamp CUSTOMIZED on everything. */
+  _massSel: new Set(),
+  _meIconColorSys: true,
+  openMassEdit() {
+    this._massSel = new Set();
+    this._meIconColorSys = true;
+    $('massEditSearch').value = '';
+    /* reset every change row: unchecked + cleared */
+    ['meAuthorOn', 'meDescOn', 'meColorOn', 'meIconColorOn', 'meFeaturedOn', 'meNewOn', 'mePinnedOn', 'meHiddenOn'].forEach(id => { $(id).checked = false; });
+    ['meAuthorRow', 'meDescRow', 'meColorRow', 'meIconColorRow', 'meFeaturedRow', 'meNewRow', 'mePinnedRow', 'meHiddenRow'].forEach(id => { $(id).classList.remove('enabled'); });
+    $('meAuthor').value = ''; $('meDesc').value = '';
+    $('meColor').value = ''; $('meIconColor').value = '';
+    ['meFeaturedSw', 'meNewSw', 'mePinnedSw', 'meHiddenSw'].forEach(id => { $(id).classList.remove('on'); });
+    this.meIconColorMode(true);
+    this.renderMassEditSwatches();
+    this.renderMassEditList();
+    $('massEditOv').classList.add('active');
+  },
+  closeMassEdit() { $('massEditOv').classList.remove('active'); },
+  renderMassEditSwatches() {
+    /* background: same options as the single-app picker (system + presets) */
+    const bgGrid = $('meColorSwatches');
+    bgGrid.innerHTML = '';
+    [...this.SYSTEM_BG_OPTIONS, ...this.presetColors].forEach(o => {
+      const sw = document.createElement('div');
+      sw.className = 'me-swatch';
+      sw.style.background = o.value;
+      sw.title = o.label;
+      sw.onclick = () => {
+        bgGrid.querySelectorAll('.me-swatch.selected').forEach(s => s.classList.remove('selected'));
+        sw.classList.add('selected');
+        $('meColor').value = o.value;
+      };
+      bgGrid.appendChild(sw);
+    });
+    /* symbol color: solid presets only (glyphs can't take gradients) */
+    const icGrid = $('meIconColorSwatches');
+    icGrid.innerHTML = '';
+    this.ICON_COLOR_PRESETS.forEach(o => {
+      const sw = document.createElement('div');
+      sw.className = 'me-swatch';
+      sw.style.background = o.value;
+      sw.title = o.label;
+      sw.onclick = () => {
+        icGrid.querySelectorAll('.me-swatch.selected').forEach(s => s.classList.remove('selected'));
+        sw.classList.add('selected');
+        $('meIconColor').value = o.value;
+      };
+      icGrid.appendChild(sw);
+    });
+  },
+  meCustomSwatch(gridId) {
+    /* typing a custom value clears the swatch highlight — the text box wins */
+    $(gridId).querySelectorAll('.me-swatch.selected').forEach(s => s.classList.remove('selected'));
+  },
+  meRowToggle(rowId, cb) { $(rowId).classList.toggle('enabled', !!(cb && cb.checked)); },
+  meIconColorMode(sys) {
+    this._meIconColorSys = !!sys;
+    $('meIconColorSys').classList.toggle('on', !!sys);
+    $('meIconColorCustom').classList.toggle('on', !sys);
+    $('meIconColorCustomWrap').style.display = sys ? 'none' : 'block';
+  },
+  renderMassEditList() {
+    const q = ($('massEditSearch').value || '').toLowerCase().trim();
+    let all = this.mergedApps();   /* hidden apps selectable — mass-unhide is a core use case */
+    if (q) all = all.filter(m => this.appMatches(m, q));
+    all.sort((a, b) => a.name.localeCompare(b.name));
+    const selCount = this._massSel.size;
+    $('massEditList').innerHTML = (selCount ? `<div class="hint" style="margin-bottom:8px; color:var(--accent); font-weight:700;"><i class="fa-solid fa-check-double"></i> ${selCount} app${selCount !== 1 ? 's' : ''} selected</div>` : '') + (all.length ? all.map(m => {
+      const ok = this.safeKey(m.key);
+      const sel = this._massSel.has(m.key);
+      const path = m.catalog ? m.catalog.path : (m.entry ? (m.entry.url || (m.entry.repo + '/' + m.entry.path) || '') : '');
+      return `<div class="app-row" onclick="SM.toggleMassEdit('${ok}')">
+        <div class="app-ico" style="background:${this.colorOf(m)};">${this.iconHTML(m)}</div>
+        <div class="app-row-info">
+          <div class="app-row-name">${this.esc(m.name)}</div>
+          <div class="app-row-sub">${this.esc(m.author || path)}</div>
+          <div class="badges">${m.hidden ? '<span class="badge h">HIDDEN</span>' : ''}${sel ? '<span class="badge a">SELECTED</span>' : ''}</div>
+        </div>
+        <button class="qbtn ${sel ? 'on-f' : ''}" title="${sel ? 'Deselect' : 'Select'}"><i class="fa-solid ${sel ? 'fa-check' : 'fa-plus'}"></i></button>
+      </div>`;
+    }).join('') : `<div class="empty"><div class="e-ico">📦</div><div class="e-title">No Apps</div><div class="e-sub">${q ? 'Nothing matches your search.' : 'Scan the repo catalog first.'}</div></div>`);
+  },
+  toggleMassEdit(key) {
+    key = this.decodeKey(key);
+    if (this._massSel.has(key)) this._massSel.delete(key);
+    else this._massSel.add(key);
+    this.renderMassEditList();
+  },
+  massEditSelectAll(on) {
+    /* selects everything matching the current search filter */
+    const q = ($('massEditSearch').value || '').toLowerCase().trim();
+    let all = this.mergedApps();
+    if (q) all = all.filter(m => this.appMatches(m, q));
+    if (on) all.forEach(m => this._massSel.add(m.key));
+    else this._massSel.clear();
+    this.renderMassEditList();
+  },
+  saveMassEdit() {
+    if (!this._massSel.size) { toast('Select at least one app first', 'err'); return; }
+    /* gather the checked changes */
+    const changes = {
+      author: $('meAuthorOn').checked ? $('meAuthor').value : null,
+      desc: $('meDescOn').checked ? $('meDesc').value : null,
+      color: $('meColorOn').checked ? $('meColor').value.trim() : null,
+      iconColor: $('meIconColorOn').checked ? (this._meIconColorSys ? '' : $('meIconColor').value.trim()) : null,
+      featured: $('meFeaturedOn').checked ? $('meFeaturedSw').classList.contains('on') : null,
+      isNew: $('meNewOn').checked ? $('meNewSw').classList.contains('on') : null,
+      pinned: $('mePinnedOn').checked ? $('mePinnedSw').classList.contains('on') : null,
+      hidden: $('meHiddenOn').checked ? $('meHiddenSw').classList.contains('on') : null
+    };
+    const anyChange = Object.values(changes).some(v => v !== null);
+    if (!anyChange) { toast('Check at least one field to change', 'err'); return; }
+    if (changes.iconColor !== null && changes.iconColor !== '' && !this.looksLikeColor(changes.iconColor)) {
+      toast('Symbol color must be a solid color like #db2777', 'err'); return;
+    }
+    if (changes.color !== null && changes.color !== '' && !this.looksLikeColor(changes.color)) {
+      toast('Background must be a color or gradient', 'err'); return;
+    }
+
+    let touched = 0, skipped = 0;
+    const merged = new Map(this.mergedApps().map(m => [m.key, m]));
+    this._massSel.forEach(key => {
+      const m = merged.get(key);
+      if (!m) { skipped++; return; }
+      let e = m.entry;
+      /* create the entry lazily — only when a value actually differs */
+      const ensure = () => { if (!e) { if (!m.catalog) { return null; } e = this.newEntryForCatalog(m.catalog); this.data.apps.push(e); } return e; };
+      const cur = f => (e ? e[f] : (f === 'featured' || f === 'isNew' || f === 'pinned' || f === 'hidden' ? false : ''));
+      let changed = false;
+      if (changes.author !== null && cur('author') !== changes.author) { const x = ensure(); if (x) { x.author = changes.author; changed = true; } }
+      if (changes.desc !== null && cur('description') !== changes.desc) { const x = ensure(); if (x) { x.description = changes.desc; changed = true; } }
+      if (changes.color !== null && cur('color') !== changes.color) { const x = ensure(); if (x) { x.color = changes.color; changed = true; } }
+      if (changes.iconColor !== null && cur('iconColor') !== changes.iconColor) { const x = ensure(); if (x) { x.iconColor = changes.iconColor; changed = true; } }
+      if (changes.featured !== null && cur('featured') !== changes.featured) { const x = ensure(); if (x) { x.featured = changes.featured; changed = true; } }
+      if (changes.isNew !== null && cur('isNew') !== changes.isNew) { const x = ensure(); if (x) { x.isNew = changes.isNew; changed = true; } }
+      if (changes.pinned !== null && cur('pinned') !== changes.pinned) { const x = ensure(); if (x) { x.pinned = changes.pinned; changed = true; } }
+      if (changes.hidden !== null && cur('hidden') !== changes.hidden) { const x = ensure(); if (x) { x.hidden = changes.hidden; changed = true; } }
+      if (changed) touched++;
+    });
+    this.persist();
+    this.renderAll();
+    this.closeMassEdit();
+    toast(touched ? `Updated ${touched} of ${this._massSel.size} selected app${this._massSel.size !== 1 ? 's' : ''}${skipped ? ' · ' + skipped + ' skipped' : ''}` : 'No changes needed (values already matched)', touched ? 'ok' : 'info');
+  },
+  /* loose color validation: hex, rgb()/rgba(), hsl(), linear-gradient, or a var() */
+  looksLikeColor(v) {
+    return /^(#[0-9a-f]{3,8}|rgba?\(|hsla?\(|linear-gradient\(|radial-gradient\(|var\(--)/i.test(String(v).trim());
+  },
+
+  /* ---------- COLOR PICKER (WebOS-matching) ---------- */
+  SYSTEM_BG_OPTIONS: [
+    { label: 'Theme',     value: 'linear-gradient(160deg, var(--bg2), var(--bg3) 55%, color-mix(in srgb, var(--accent) 22%, var(--bg3)))' },
+    { label: 'Accent',    value: 'var(--accent)' },
+    { label: 'Accent Gr', value: 'linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #000))' },
+    { label: 'Soft Gr',   value: 'linear-gradient(160deg, color-mix(in srgb, var(--accent) 20%, var(--bg2)), color-mix(in srgb, var(--accent) 38%, var(--bg3)))' },
+  ],
+  presetColors: [
+    { label: 'Ink',     value: '#101014' },
+    { label: 'Slate',   value: 'linear-gradient(135deg, #2b2f36, #4b5563)' },
+    { label: 'White',   value: 'linear-gradient(135deg, #ffffff, #e8e8ed)' },
+    { label: 'Crimson', value: 'linear-gradient(135deg, #e11d48, #fb7185)' },
+    { label: 'Sunset',  value: 'linear-gradient(135deg, #f97316, #fbbf24)' },
+    { label: 'Amber',   value: 'linear-gradient(135deg, #e8a83e, #d4882a)' },
+    { label: 'Forest',  value: 'linear-gradient(135deg, #166534, #4ade80)' },
+    { label: 'Teal',    value: 'linear-gradient(135deg, #0f766e, #5eead4)' },
+    { label: 'Ocean',   value: 'linear-gradient(135deg, #1e3a8a, #60a5fa)' },
+    { label: 'Violet',  value: 'linear-gradient(135deg, #6d28d9, #a78bfa)' },
+    { label: 'Pink',    value: 'linear-gradient(135deg, #db2777, #f9a8d4)' },
+    { label: 'Frost',   value: 'linear-gradient(135deg, #c7d9ee, #f1f6fc)' },
+  ],
+  openColorPicker() {
+    const render = (opts, gridId) => {
+      const grid = $(gridId);
+      grid.innerHTML = '';
+      opts.forEach(o => {
+        const sw = document.createElement('div');
+        sw.className = 'color-swatch' + (this.editColor === o.value ? ' selected' : '');
+        sw.style.background = o.value;
+        sw.innerHTML = `<span class="swatch-tag">${o.label}</span>`;
+        sw.onclick = () => {
+          document.querySelectorAll('.color-swatch.selected').forEach(s => s.classList.remove('selected'));
+          sw.classList.add('selected');
+          $('customColorInput').value = o.value;
+          this.updateColorPreview(o.value);
+        };
+        grid.appendChild(sw);
+      });
+    };
+    render(this.SYSTEM_BG_OPTIONS, 'colorSwatchSystem');
+    render(this.presetColors, 'colorSwatchGrid');
+    $('customColorInput').value = this.editColor || '';
+    this.updateColorPreview(this.editColor || '');
+    $('colorOv').classList.add('active');
+  },
+  closeColorPicker() { $('colorOv').classList.remove('active'); },
+  updateColorPreview(color) {
+    const name = $('edName').value || 'App';
+    const bg = (color && color.trim() !== '') ? color : 'var(--bg3)';
+    const el = $('colorPreviewIcon');
+    el.style.background = bg;
+    el.innerHTML = this.iconSelectionFaceHTML(this.editIcon || '', name);
+    $('colorPreviewLabel').textContent = name;
+  },
+  saveColorPicker() {
+    this.editColor = ($('customColorInput').value || '').trim();
+    this.updateEditorPreview();
+    this.closeColorPicker();
+  },
+
+  /* ---------- EXPORT ---------- */
+  buildExport() {
+    const d = {
+      webos_store: 2, version: 2,
+      repo: this.data.repo,
+      updated_at: new Date().toISOString(),
+      categories: this.data.categories.map(c => { const o = { id: c.id, name: c.name, icon: c.icon }; if (c.download === true) o.download = true; if (c.hidden) o.hidden = true; return o; }),
+      apps: this.data.apps.map(e => {
+        const o = { name: e.name };
+        if (e.rawName && e.rawName !== e.name) o.rawName = e.rawName;
+        if (e.path) o.path = e.path;                          /* repo-app matching key */
+        if (e.repo) o.repo = e.repo;                          /* added app from another repo */
+        if (e.repo && e.branch && e.branch !== 'main') o.branch = e.branch;
+        else if (e.repo && e.branch === 'main') o.branch = 'main';
+        if (e.url) o.url = e.url;
+        if (e.author) o.author = e.author;
+        if (e.description) o.description = e.description;
+        if (e.icon) o.icon = e.icon;
+        if (e.color) o.color = e.color;
+        if (e.iconColor) o.iconColor = e.iconColor;
+        if (e.tags.length) o.tags = e.tags;
+        if (e.featured) o.featured = true;
+        if (e.isNew) o.isNew = true;
+        if (e.pinned) o.pinned = true;
+        if (e.hidden) o.hidden = true;
+        if (e.size) o.size = e.size;
+        if (e.type && e.type !== 'HTML') o.type = e.type;
+        return o;
+      })
+    };
+    return JSON.stringify(d, null, 2);
+  },
+  renderExportStats() {
+    if (!$('exFlags')) return;
+    $('exCatalog').textContent = this.catalog.loaded ? this.catalog.apps.length + ' apps · ' + this.catalog.folderCats.length + ' folders' : 'not scanned';
+    const d = this.data.apps;
+    $('exFlags').textContent = `${d.length} / ${d.filter(e => e.featured).length} / ${d.filter(e => e.isNew).length} / ${d.filter(e => e.pinned).length}`;
+    $('exCats').textContent = this.data.categories.length;
+    $('exSize').textContent = (this.buildExport().length / 1024).toFixed(1) + ' KB';
+  },
+  exportDownload() {
+    this.markSaved();
+    const blob = new Blob([this.buildExport()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'store.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast('store.json downloaded — upload it to GitHub', 'ok');
+  },
+  exportCopy() {
+    const json = this.buildExport();
+    this.markSaved();
+    const done = ok => toast(ok ? 'JSON copied — paste into store.json on GitHub' : 'Copy failed', ok ? 'ok' : 'err');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(json).then(() => done(true), () => done(this.fallbackCopy(json)));
+    else done(this.fallbackCopy(json));
+  },
+
+  /* ---------- push store.json straight to GitHub ----------
+     Uses the Contents API (GET current sha → PUT new content). The token is
+     stored in localStorage on this device only — sm_github_token. */
+  ghBranchDefault() { return (this.catalog && this.catalog.branch) || 'main'; },
+  saveGhToken() {
+    const t = $('ghTokenField').value.trim();
+    if (t) { localStorage.setItem('sm_github_token', t); toast('Token saved on this device', 'ok'); }
+    else { localStorage.removeItem('sm_github_token'); toast('Token cleared', 'info'); }
+  },
+  async pushStoreToGitHub() {
+    const repo = ($('repoField').value.trim() || this.data.repo || '').trim();
+    if (!/^[^\/\s]+\/[^\/\s]+$/.test(repo)) { toast('Set owner/repo in "Store Repo" above first', 'err'); return; }
+    const token = (localStorage.getItem('sm_github_token') || $('ghTokenField').value || '').trim();
+    if (!token) { toast('Paste a GitHub token with write access to ' + repo, 'err'); return; }
+    if ($('ghTokenField').value.trim() !== token) $('ghTokenField').value = token;
+    const branch = $('ghBranchField').value.trim() || this.ghBranchDefault();
+    const path = ($('ghPathField').value.trim() || 'store.json').replace(/^\/+/, '');
+
+    /* THE warning — pushing replaces the entire file in the repo */
+    if (!confirm('Replace ' + path + ' in ' + repo + ' (branch ' + branch + ')?\n\n' +
+      'This ENTIRELY REPLACES the store.json currently in the repo with your current store (' +
+      this.data.apps.length + ' entries, ' + this.data.categories.length + ' categories).\n\n' +
+      'Devices refresh it automatically. Continue?')) return;
+
+    $('pushBar').classList.add('active');
+    const headers = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' };
+    const utf8ToB64 = s => btoa(unescape(encodeURIComponent(s)));
+    try {
+      /* 1. fetch the current file's sha — required to overwrite (404 = brand new file) */
+      let sha = null;
+      const gr = await fetch('https://api.github.com/repos/' + repo + '/contents/' + encodeURIComponent(path) + '?ref=' + encodeURIComponent(branch) + '&_t=' + Date.now(), { headers, cache: 'no-store' });
+      if (gr.ok) { const meta = await gr.json(); sha = meta.sha; }
+      else if (gr.status !== 404) throw new Error('Could not read the current file (HTTP ' + gr.status + ')');
+
+      /* 2. PUT the new content (fresh timestamp so the repo copy reflects this push) */
+      this.data.updated_at = new Date().toISOString();
+      const body = { message: 'Update ' + path + ' via Store Manager', content: utf8ToB64(this.buildExport()), branch };
+      if (sha) body.sha = sha;
+      const pr = await fetch('https://api.github.com/repos/' + repo + '/contents/' + encodeURIComponent(path), { method: 'PUT', headers, body: JSON.stringify(body) });
+      if (!pr.ok) {
+        let msg = 'HTTP ' + pr.status;
+        try { const e = await pr.json(); if (e && e.message) msg = e.message; } catch (e) {}
+        if (pr.status === 401) msg = 'Token rejected (401) — check the token value';
+        else if (pr.status === 403) msg = 'Forbidden (403) — token needs write access to ' + repo + ' (classic: repo scope · fine-grained: Contents read/write)';
+        else if (pr.status === 404) msg = 'Not found (404) — check the repo, branch "' + branch + '" and path "' + path + '"';
+        throw new Error(msg);
+      }
+      await pr.json();
+
+      /* 3. success — mark the local store as saved & point the reload link at the file */
+      this.markSaved();
+      const rawUrl = 'https://raw.githubusercontent.com/' + repo + '/' + branch + '/' + path;
+      $('storeUrlField').value = rawUrl;
+      this.storeUrl = rawUrl;
+      localStorage.setItem('sm_store_url', rawUrl);
+      toast('Pushed to ' + repo + ' @ ' + branch + ' ✓', 'ok');
+    } catch (e) {
+      toast('Push failed: ' + e.message, 'err');
+    } finally { $('pushBar').classList.remove('active'); }
+  },
+  fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;top:0;';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  },
+
+  /* ---------- GitHub loading ---------- */
+  saveStoreUrl() {
+    const url = $('storeUrlField').value.trim();
+    if (url && !/^https?:\/\//i.test(url)) { toast('Paste a valid https link', 'err'); return; }
+    this.storeUrl = url;
+    localStorage.setItem('sm_store_url', url);
+    toast(url ? 'Link saved' : 'Link cleared', 'ok');
+  },
+  async reloadFromGitHub() {
+    const url = ($('storeUrlField').value || '').trim() || this.storeUrl;
+    if (!url) { toast('Paste your store JSON link first', 'err'); return; }
+    if (this.serialize() !== this.savedSnapshot && !confirm('Loading replaces your current edits. Continue?')) return;
+    $('loadBar').classList.add('active');
+    try {
+      const res = await fetch(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      this.storeUrl = url; localStorage.setItem('sm_store_url', url);
+      this.loadData(data);
+    } catch (e) {
+      toast('Could not load: ' + e.message, 'err');
+    } finally { $('loadBar').classList.remove('active'); }
+  },
+
+  /* ---------- import ---------- */
+  importFromFile() { $('importFile').click(); },
+  importFilePicked(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try { this.loadData(JSON.parse(r.result)); }
+      catch (e) { toast('Invalid store JSON', 'err'); }
+    };
+    r.readAsText(file);
+    event.target.value = '';
+  },
+  importFromText() {
+    const txt = $('importText').value.trim();
+    if (!txt) { toast('Paste the JSON first', 'err'); return; }
+    try { this.loadData(JSON.parse(txt)); $('importText').value = ''; }
+    catch (e) { toast('Invalid store JSON', 'err'); }
+  },
+
+  /* ---------- add apps from another repo ---------- */
+  async bulkImportRepo() {
+    const repo = $('otherRepoField').value.trim();
+    if (!/^[^\/\s]+\/[^\/\s]+$/.test(repo)) { toast('Enter owner/repo', 'err'); return; }
+    $('repoBar').classList.add('active');
+    try {
+      let tree = null, branch = 'main';
+      for (const b of ['main', 'master']) {
+        try {
+          const res = await fetch(`https://api.github.com/repos/${repo}/git/trees/${b}?recursive=1`);
+          if (res.ok) { tree = (await res.json()).tree; branch = b; break; }
+        } catch (e) {}
+      }
+      if (!tree) throw new Error('repo not found or rate-limited');
+      const files = tree.filter(i => i.type === 'blob' && /\.(html?|swf|js)$/i.test(i.path) && !i.path.split('/').pop().startsWith('.'));
+      if (!files.length) { toast('No app files found in that repo', 'err'); return; }
+      const tagCount = new Map();
+      files.forEach(f => {
+        const parts = f.path.split('/'); parts.pop();
+        parts.forEach(p => { const id = this.slugify(p); if (id) tagCount.set(id, (tagCount.get(id) || 0) + 1); });
+      });
+      const existing = new Set(this.data.apps.filter(e => e.repo === repo).map(e => e.repo + '/' + e.path));
+      let added = 0;
+      files.forEach(f => {
+        const rawName = f.path.split('/').pop();
+        const name = this.cleanName(rawName);
+        const key = repo + '/' + f.path;
+        if (existing.has(key)) return;
+        if (this.data.apps.some(e => e.repo === repo && e.path === f.path)) return;
+        const parts = f.path.split('/'); parts.pop();
+        const tags = [...new Set(parts.map(p => this.slugify(p)).filter(t => this.data.categories.some(c => c.id === t)))];
+        this.data.apps.push({
+          uid: this.genUid(), name, rawName, author: '', description: '', icon: '', color: '', iconColor: '', tags,
+          featured: false, isNew: false, pinned: false, hidden: false,
+          source: 'github', repo, branch, path: f.path, url: '',
+          size: f.size || 0, type: this.getFileType(rawName)
+        });
+        added++;
+      });
+      if (added && tagCount.size) {
+        const newCats = [...tagCount.keys()].filter(t => !this.data.categories.some(c => c.id === t) && !(this.catalog.loaded && this.catalog.folderCats.some(f => f.id === t)));
+        if (newCats.length && confirm(`Also create ${newCats.length} categories from that repo's folders (${newCats.slice(0, 5).join(', ')}${newCats.length > 5 ? '…' : ''}) so the added apps are categorized?`)) {
+          newCats.forEach(t => this.data.categories.push({ id: t, name: this.titleCase(t), icon: '📁' }));
+        }
+      }
+      this.persist(); this.renderAll();
+      toast(added ? `Added ${added} apps from ${repo}` : 'All apps from that repo are already added', added ? 'ok' : 'info');
+    } catch (e) {
+      toast('Repo scan failed: ' + e.message, 'err');
+    } finally { $('repoBar').classList.remove('active'); }
+  }
+});
+
+SM.init();
+
+</script>
+</body>
+</html>
